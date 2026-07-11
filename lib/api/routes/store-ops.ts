@@ -1,5 +1,9 @@
+import { zValidator } from '@hono/zod-validator';
 import { Hono } from 'hono';
+import { z } from 'zod';
 
+import { prisma } from '@/lib/prisma';
+import { hashPassword } from '@/lib/password';
 import { getStoreDashboard } from '@/lib/db/store-dashboard';
 import { getIntelligenceSummary, getRecommendations } from '@/lib/db/intelligence';
 import {
@@ -25,6 +29,27 @@ storeOpsRoutes.get('/intelligence/summary', async (c) => {
 });
 storeOpsRoutes.get('/intelligence/recommendations', async (c) => {
   return sendData(c, await getRecommendations(c.get('storeId')));
+});
+
+// ── Kiosk device PIN (OWNER or MANAGER can set/reset) ─────────────────────────
+storeOpsRoutes.get('/kiosk-pin', async (c) => {
+  const store = await prisma.store.findUnique({
+    where: { id: c.get('storeId') },
+    select: { kioskPinHash: true },
+  });
+  return sendData(c, { isSet: !!store?.kioskPinHash });
+});
+
+const KioskPinBody = z.object({ pin: z.string().min(4).max(20) });
+storeOpsRoutes.put('/kiosk-pin', zValidator('json', KioskPinBody), async (c) => {
+  const hash = await hashPassword(c.req.valid('json').pin);
+  await prisma.store.update({ where: { id: c.get('storeId') }, data: { kioskPinHash: hash } });
+  return sendData(c, { ok: true, isSet: true });
+});
+
+storeOpsRoutes.delete('/kiosk-pin', async (c) => {
+  await prisma.store.update({ where: { id: c.get('storeId') }, data: { kioskPinHash: null } });
+  return sendData(c, { ok: true, isSet: false });
 });
 
 // ── Kiosk orders ──────────────────────────────────────────────────────────────

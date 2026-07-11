@@ -2,7 +2,7 @@
 
 import {
   LayoutDashboard, Package, ShoppingBag, PencilLine, ClipboardCheck,
-  BarChart3, Lightbulb, Store as StoreIcon, UserCog, Settings, LogOut, Menu, X, Gem,
+  BarChart3, Lightbulb, Store as StoreIcon, UserCog, Settings, LogOut, Menu, X, Gem, Lock,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -18,6 +18,7 @@ const NAV = [
   { label: 'Custom Designs', href: '/store/custom-designs', icon: PencilLine },
   { label: 'Intelligence', href: '/store/intelligence', icon: Lightbulb },
   { label: 'Analytics', href: '/store/analytics', icon: BarChart3 },
+  { label: 'Kiosk PIN', href: '/store/kiosk-pin', icon: Lock }, // owner + manager
   { label: 'Store Profile', href: '/store/profile', icon: StoreIcon, ownerOnly: true },
   { label: 'Managers', href: '/store/managers', icon: UserCog, ownerOnly: true },
   { label: 'Settings', href: '/store/settings', icon: Settings, ownerOnly: true },

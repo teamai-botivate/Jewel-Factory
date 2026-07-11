@@ -12,8 +12,6 @@ import {
   deleteManager,
 } from '@/lib/db/stores';
 import { signUpload, storeFolder } from '@/lib/cloudinary';
-import { prisma } from '@/lib/prisma';
-import { hashPassword } from '@/lib/password';
 import { sendData, sendError } from '../envelope';
 import { storeGuard, type AppEnv } from '../guards';
 
@@ -52,30 +50,8 @@ storePortalRoutes.post('/branding/logo/sign', async (c) => {
   }
 });
 
-// ── Kiosk PIN (device unlock) ─────────────────────────────────────────────────
-
-// GET /kiosk-pin — is a kiosk PIN currently set? (never returns the PIN itself)
-storePortalRoutes.get('/kiosk-pin', async (c) => {
-  const store = await prisma.store.findUnique({
-    where: { id: c.get('storeId') },
-    select: { kioskPinHash: true },
-  });
-  return sendData(c, { isSet: !!store?.kioskPinHash });
-});
-
-// PUT /kiosk-pin — set/replace the kiosk PIN (min 4 chars/digits)
-const KioskPinBody = z.object({ pin: z.string().min(4).max(20) });
-storePortalRoutes.put('/kiosk-pin', zValidator('json', KioskPinBody), async (c) => {
-  const hash = await hashPassword(c.req.valid('json').pin);
-  await prisma.store.update({ where: { id: c.get('storeId') }, data: { kioskPinHash: hash } });
-  return sendData(c, { ok: true, isSet: true });
-});
-
-// DELETE /kiosk-pin — remove the PIN (kiosk becomes open to anyone with the URL)
-storePortalRoutes.delete('/kiosk-pin', async (c) => {
-  await prisma.store.update({ where: { id: c.get('storeId') }, data: { kioskPinHash: null } });
-  return sendData(c, { ok: true, isSet: false });
-});
+// NOTE: Kiosk PIN routes moved to store-ops (managerGuard) so OWNER OR MANAGER
+// can set/reset the kiosk device PIN.
 
 // ── Profile (name, phone, fixed address) ──────────────────────────────────────
 
