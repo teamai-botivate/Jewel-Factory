@@ -2,7 +2,12 @@ import { zValidator } from '@hono/zod-validator';
 import { Hono } from 'hono';
 import { z } from 'zod';
 
+import { getCookie, setCookie } from 'hono/cookie';
+
 import { prisma } from '@/lib/prisma';
+import { getServerEnv } from '@/lib/env';
+import { verifyPassword } from '@/lib/password';
+import { KIOSK_COOKIE, issueKioskCookie, verifyKioskCookie, cookieOptions } from '@/lib/auth';
 import { listActiveProducts, getActiveProductByDesignOrId } from '@/lib/db/manufacturer-catalog';
 import { placeKioskOrder, getKioskOrderPublic } from '@/lib/db/orders';
 import { placeCustomRequest } from '@/lib/db/custom-design';
@@ -37,6 +42,46 @@ kioskRoutes.get('/store/:slug', async (c) => {
     id: store.id, name: store.name, slug: store.slug, city: store.city,
     logoUrl: store.logoUrl, tagline: store.tagline,
   });
+});
+
+// ── Kiosk lock status: does this store require a PIN, and is this device unlocked?
+kioskRoutes.get('/lock-status/:slug', async (c) => {
+  const env = getServerEnv();
+  const store = await prisma.store.findFirst({
+    where: { slug: c.req.param('slug'), isActive: true, registrationStatus: 'APPROVED' },
+    select: { id: true, kioskPinHash: true },
+  });
+  if (!store) return sendError(c, 'not_found', 'Store not found', 404);
+
+  // No PIN set → kiosk is open to anyone with the URL.
+  if (!store.kioskPinHash) return sendData(c, { requiresPin: false, unlocked: true });
+
+  const unlocked = await verifyKioskCookie(getCookie(c, KIOSK_COOKIE), store.id, {
+    secret: env.STORE_SECRET,
+    ttlSeconds: env.COOKIE_TTL_SECONDS,
+  });
+  return sendData(c, { requiresPin: true, unlocked });
+});
+
+// ── Kiosk unlock: verify the store PIN, set the device cookie (8h) ─────────────
+const UnlockBody = z.object({ slug: z.string().min(1), pin: z.string().min(1) });
+
+kioskRoutes.post('/unlock', zValidator('json', UnlockBody), async (c) => {
+  const env = getServerEnv();
+  const { slug, pin } = c.req.valid('json');
+  const store = await prisma.store.findFirst({
+    where: { slug, isActive: true, registrationStatus: 'APPROVED' },
+    select: { id: true, kioskPinHash: true },
+  });
+  if (!store) return sendError(c, 'not_found', 'Store not found', 404);
+  if (!store.kioskPinHash) return sendData(c, { ok: true }); // no PIN configured
+
+  const ok = await verifyPassword(pin, store.kioskPinHash);
+  if (!ok) return sendError(c, 'unauthorized', 'Incorrect PIN', 401);
+
+  const token = await issueKioskCookie(store.id, { secret: env.STORE_SECRET, ttlSeconds: env.COOKIE_TTL_SECONDS });
+  setCookie(c, KIOSK_COOKIE, token, cookieOptions(env.COOKIE_TTL_SECONDS, env.NODE_ENV === 'production'));
+  return sendData(c, { ok: true });
 });
 
 // ── Catalog (manufacturer's active products) ──────────────────────────────────

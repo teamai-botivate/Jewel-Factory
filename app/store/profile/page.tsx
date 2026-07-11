@@ -1,6 +1,6 @@
 'use client';
 
-import { Loader2, Save } from 'lucide-react';
+import { Loader2, Save, Lock } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -99,7 +99,72 @@ export default function StoreProfilePage() {
           {savingBrand ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Save className="mr-1.5 h-4 w-4" />Save branding</>}
         </Button>
       </section>
+
+      <KioskPinSection />
     </div>
+  );
+}
+
+function KioskPinSection() {
+  const [isSet, setIsSet] = useState<boolean | null>(null);
+  const [pin, setPin] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      const res = await fetch('/api/store/kiosk-pin', { cache: 'no-store' });
+      const json = (await res.json()) as { data?: { isSet: boolean } };
+      setIsSet(json.data?.isSet ?? false);
+    })();
+  }, []);
+
+  async function savePin() {
+    if (pin.length < 4) { setMsg('PIN must be at least 4 characters.'); return; }
+    setBusy(true); setMsg(null);
+    try {
+      await apiSend('PUT', '/api/store/kiosk-pin', { pin });
+      setIsSet(true); setPin(''); setMsg('Kiosk PIN saved. In-store devices will need it to unlock.');
+    } catch { setMsg('Could not save PIN.'); } finally { setBusy(false); }
+  }
+
+  async function removePin() {
+    if (!confirm('Remove the kiosk PIN? The kiosk will then be open to anyone with the URL.')) return;
+    setBusy(true); setMsg(null);
+    try {
+      await apiSend('DELETE', '/api/store/kiosk-pin');
+      setIsSet(false); setMsg('Kiosk PIN removed. Kiosk is now open.');
+    } catch { setMsg('Could not remove PIN.'); } finally { setBusy(false); }
+  }
+
+  return (
+    <section className="space-y-3 rounded-xl border bg-card p-4">
+      <div className="flex items-center gap-2">
+        <Lock className="h-4 w-4 text-primary" />
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Kiosk Device PIN</h2>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Set a PIN so only your in-store device can open the customer kiosk. Staff enter it once
+        (device stays unlocked 8 hours), then hand the device to customers.
+        {isSet === true && <span className="ml-1 font-medium text-green-700">A PIN is currently set.</span>}
+        {isSet === false && <span className="ml-1 font-medium text-amber-700">No PIN — kiosk is open to anyone with the URL.</span>}
+      </p>
+      <div className="flex flex-wrap items-end gap-2">
+        <div>
+          <label className="text-xs font-medium text-muted-foreground">{isSet ? 'New PIN' : 'Set PIN'} (min 4)</label>
+          <Input className="mt-1 max-w-[160px]" type="password" inputMode="numeric" value={pin} onChange={(e) => setPin(e.target.value)} placeholder="••••" />
+        </div>
+        <Button onClick={savePin} disabled={busy} className="metal-sheen text-[#17120b] font-semibold">
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : (isSet ? 'Update PIN' : 'Set PIN')}
+        </Button>
+        {isSet && (
+          <Button onClick={removePin} disabled={busy} variant="outline" className="border-red-200 text-red-700 hover:bg-red-50">
+            Remove PIN
+          </Button>
+        )}
+      </div>
+      {msg && <p className="text-sm text-muted-foreground">{msg}</p>}
+    </section>
   );
 }
 

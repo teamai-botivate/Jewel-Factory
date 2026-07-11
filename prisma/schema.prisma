@@ -122,6 +122,10 @@ model Store {
   addressPincode  String? @map("address_pincode")
   addressLandmark String? @map("address_landmark")
 
+  // Kiosk device unlock: owner sets a PIN; the in-store device unlocks once with
+  // it (8h cookie). Null = kiosk open to anyone with the URL (no PIN required).
+  kioskPinHash String? @map("kiosk_pin_hash") // bcrypt of the kiosk PIN
+
   isActive  Boolean  @default(false) @map("is_active") // true after approval
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

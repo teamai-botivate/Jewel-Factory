@@ -18,6 +18,7 @@
 export const MANUFACTURER_COOKIE = 'jf_manufacturer';
 export const STORE_COOKIE = 'jf_store';
 export const MANAGER_COOKIE = 'jf_manager';
+export const KIOSK_COOKIE = 'jf_kiosk'; // per-store kiosk device unlock
 
 // ── Cookie option shape (for hono/next setCookie) ─────────────────────────────
 
@@ -185,4 +186,24 @@ export async function verifyManagerCookie(
   const parts = await verifyToken(token, opts.secret, opts.ttlSeconds, 2);
   if (!parts || !UUID_RE.test(parts[0]!) || !UUID_RE.test(parts[1]!)) return { valid: false };
   return { valid: true, managerId: parts[0]!, storeId: parts[1]! };
+}
+
+// ── Kiosk device unlock cookie: <storeId> (namespaced secret) ─────────────────
+// Set on a store device after entering the store's kiosk PIN. NOT a login — just
+// proves this device is authorised to use THIS store's kiosk.
+
+export async function issueKioskCookie(
+  storeId: string,
+  opts: { secret: string; ttlSeconds: number },
+): Promise<string> {
+  return issueToken(`${opts.secret}:kiosk`, [storeId], opts.ttlSeconds);
+}
+
+export async function verifyKioskCookie(
+  token: string | undefined,
+  storeId: string,
+  opts: { secret: string; ttlSeconds: number },
+): Promise<boolean> {
+  const parts = await verifyToken(token, `${opts.secret}:kiosk`, opts.ttlSeconds, 1);
+  return !!parts && parts[0] === storeId;
 }

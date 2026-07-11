@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { prisma } from '@/lib/prisma';
 import { StoreProvider, type KioskStore } from '@/components/kiosk/StoreContext';
 import { KioskHeader } from '@/components/kiosk/KioskHeader';
+import { KioskGate } from '@/components/kiosk/KioskGate';
 
 async function resolveStore(slug: string): Promise<KioskStore | null> {
   const store = await prisma.store.findFirst({
@@ -27,7 +28,9 @@ export default async function KioskLayout({
   return (
     <StoreProvider store={store}>
       <KioskHeader />
-      <div className="pt-[88px]">{children}</div>
+      <div className="pt-[88px]">
+        <KioskGate>{children}</KioskGate>
+      </div>
       <footer className="mt-16 border-t bg-[#1A1A1A] py-8 text-center text-white/70">
         <p className="font-display text-lg">{store.name}</p>
         {store.tagline && <p className="mt-1 text-sm text-white/50">{store.tagline}</p>}
