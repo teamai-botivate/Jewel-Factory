@@ -1,0 +1,388 @@
+================================================================================
+  JEWEL FACTORY — COMPLETE USER FLOWS & GUIDE (Hinglish)
+================================================================================
+  Har user (Customer, Store Owner, Store Manager, Manufacturer) kya-kya kaam
+  karega, kaise karega, step-by-step. Plus saare login credentials.
+================================================================================
+
+
+================================================================================
+  SECTION 0 — SYSTEM EK LINE MEIN
+================================================================================
+
+Manufacturer designs banata hai (catalog) → Stores register karke approve hote
+hain → Customer store ke kiosk pe aake order karta hai → Manager approve karta
+hai → Order manufacturer ke paas jaata hai → Manufacturer store ke address pe
+bhejta hai → Store customer ko de deta hai.
+
+  MANUFACTURER (1) ──catalog──> STORES (many) ──kiosk──> CUSTOMERS (many)
+       ^                            |
+       |___________ orders _________|  (manager approve karke bhejta hai)
+
+
+================================================================================
+  SECTION 1 — LOGIN CREDENTIALS (seed ke baad)
+================================================================================
+
+Ye credentials `pnpm db:seed` chalane ke baad milte hain.
+
+  ┌─────────────────┬──────────────────────────┬──────────────────┬─────────────────────────────┐
+  │ Role            │ Email                    │ Password         │ Login URL                    │
+  ├─────────────────┼──────────────────────────┼──────────────────┼─────────────────────────────┤
+  │ Manufacturer    │ admin@atjewellers.com    │ manufacturer123  │ /manufacturer/login          │
+  │ Store Owner     │ store@demo.com           │ store123         │ /store/login                 │
+  │ Store Manager   │ manager@demo.com         │ manager123       │ /store/manager/login         │
+  │ Customer        │ (koi login NAHI)         │ —                │ /demo  (kiosk, no login)     │
+  └─────────────────┴──────────────────────────┴──────────────────┴─────────────────────────────┘
+
+  NOTE:
+  - Store Owner + Manager + Customer sirf tab exist karte hain jab demo store
+    seed kiya ho:  SEED_DEMO_STORE=true pnpm db:seed
+  - Customer kiosk ka URL = /<store-slug>  (demo store ka slug "demo" hai → /demo)
+  - Production mein "manufacturer123" TURANT badal dena.
+
+  ENTRY POINT sabke liye:  /portal  (3 cards: Store Owner / Manager / Manufacturer)
+
+
+================================================================================
+  SECTION 2 — MANUFACTURER (Global Admin) 🏭
+================================================================================
+
+KAUN: Ek hi company (AT Jewellers). Pura system ka admin.
+LOGIN: /manufacturer/login  →  admin@atjewellers.com / manufacturer123
+PORTAL: /manufacturer/*
+
+--- MANUFACTURER KYA-KYA KAAM KAREGA ---
+
+1. DASHBOARD (/manufacturer/dashboard)
+   - Ek nazar mein: total designs, active designs, pending B2B orders,
+     pending kiosk orders, pending store registrations, active stores
+   - Recent B2B orders list
+
+2. CATALOG MANAGE KARNA (/manufacturer/catalog)  [SABSE ZAROORI KAAM]
+   - "Add Design" click → naya product banao:
+       • Photo upload (Cloudinary pe seedha jaata hai)
+       • Design Name (e.g. "Lotus Jhumka")
+       • Category (Ring/Earring/Necklace/etc — dropdown)
+       • Sub-category, Weight (grams), Purity (dropdown: 24K/22K/18K...)
+       • Min Order Qty
+       • AR Try-On: transparent PNG upload + jewellery type select (optional)
+       • Status: Draft (hidden) ya Active (stores/customers dekh sakte hain)
+   - Design number AUTOMATIC milta hai: JF-0001, JF-0002... (khud nahi daalna)
+   - KOI PRICE NAHI, KOI METAL FIELD NAHI (Gold only — ye rule hai)
+   - Edit/Delete: pencil/trash icon se
+       (Delete: agar order history hai to archive ho jaata hai, warna delete)
+
+3. STORE REGISTRATIONS APPROVE KARNA (/manufacturer/store-registrations)
+   - Jab koi naya store register karta hai → yahan "Pending" dikhta hai
+   - Store ki detail dikhti hai (naam, owner, address)
+   - "Approve" → store ko access mil jaata hai + tumhare catalog se link ho jaata hai
+       → Store OWNER ko automatically EMAIL jaata hai (approval confirmation +
+         owner login email + manager login email + portal URLs + kiosk URL +
+         forgot-password links). Password email mein nahi jaata (owner ne khud
+         banaya tha register ke waqt). Owner manager ka login apne staff ko de deta hai.
+       → (Email tabhi jaayega jab SMTP configured ho — warna console mein print hoga)
+   - "Reject" → store ko access nahi milta
+
+4. STORES MANAGE KARNA (/manufacturer/stores)
+   - Saare approved stores ki list
+   - Edit: naam/email/city/phone badlo (pencil icon)
+   - Reset Password: store ka login password reset karo (key icon)
+   - Activate/Deactivate: store ka access on/off (toggle)
+   - Delete: store hatao (trash icon)
+
+5. B2B ORDERS DEKHNA (/manufacturer/orders)
+   - Stores ne jo restock orders bheje (apne liye stock mangwana)
+   - HAR ORDER PE STORE KA NAAM dikhta hai (kis store ne kya manga)
+   - Order pe click → detail → status advance karo:
+       PENDING → CONFIRMED → PACKED → SHIPPED → DELIVERED
+   - Tracking number daal sakte ho (PACKED step pe)
+   - DELIVERED pe → product automatically store ke inventory mein add ho jaata hai
+
+6. KIOSK ORDERS DEKHNA (/manufacturer/kiosk-orders)
+   - Customers ne kiosk pe jo order kiye (manager ne approve karne ke baad)
+   - ⚠️ CUSTOMER KA KOI DETAIL NAHI DIKHTA (naam/phone/email/address — sab hidden)
+   - Sirf dikhta hai: STORE ka naam + "Ship to store address" + items
+   - Status advance: PENDING → ... → DELIVERED (store ke address pe bhejo)
+
+7. CUSTOM DESIGN ORDERS (/manufacturer/custom-designs)
+   - Customer ne jo custom design manga, manager ne approve karke bheja
+   - ⚠️ CUSTOMER KA KOI DETAIL NAHI (sirf store naam + address + design specs + image)
+   - Status advance: PENDING → CONFIRMED → IN_PRODUCTION → PACKED → SHIPPED → DELIVERED
+
+--- MANUFACTURER KA GOLDEN RULE ---
+   Manufacturer ko customer ki koi bhi personal info KABHI nahi dikhti.
+   Wo hamesha STORE ke fixed address pe bhejta hai. Store phir customer ko deta hai.
+
+
+================================================================================
+  SECTION 3 — STORE OWNER 🏪
+================================================================================
+
+KAUN: Retail shop ka maalik. Khud register karta hai.
+REGISTER: /store/register  (manufacturer approval ke baad access milta hai)
+LOGIN: /store/login  →  store@demo.com / store123
+PORTAL: /store/*
+
+--- STORE OWNER KYA-KYA KAAM KAREGA ---
+
+0. REGISTRATION (pehli baar) (/store/register)
+   - Form bharo:
+       • Store naam, owner naam + phone
+       • Store email + password (ye login credentials banenge)
+       • Logo URL (optional)
+       • FIXED DELIVERY ADDRESS (street/city/state/pincode) — YAHI PE MANUFACTURER
+         BHEJEGA, isliye sahi daalo
+       • Ek Manager account (naam/email/password) — pehla manager
+   - Submit → "Registration submitted" → manufacturer ke approve karne ka wait
+   - Approve hone ke baad hi /store/login se andar ja paoge
+
+1. DASHBOARD (/store/dashboard)
+   - Pending approvals count, total kiosk/B2B/custom orders
+   - Pending items pe click → seedha approvals page
+
+2. PENDING APPROVALS (/store/pending-approvals)  [MANAGER + OWNER dono kar sakte]
+   - Customer ke kiosk orders + store ke B2B orders jo approval ka wait kar rahe
+   - "Approve" → manufacturer ke paas chala jaata hai
+   - "Reject" → cancel
+
+3. MANUFACTURER CATALOG BROWSE + RESTOCK ORDER (/store/manufacturer-catalog)
+   [SIRF OWNER]
+   - Manufacturer ke saare designs browse karo
+   - Cart mein add karo (quantity set karo)
+   - "Place Order" → B2B order ban jaata hai (manager approval ke baad manufacturer ko)
+   - Ye order tumhare FIXED ADDRESS pe aayega
+
+4. B2B ORDERS (/store/b2b-orders)
+   - Tumhare restock orders ki list + status (manufacturer ka live status)
+   - Tracking number bhi dikhta hai jab manufacturer daale
+
+5. KIOSK ORDERS (/store/kiosk-orders)
+   - Customers ne jo kiosk pe order kiya — sab dikhta hai
+   - CUSTOMER KA NAAM + PHONE DIKHTA HAI (store ko allowed hai)
+   - Status + approval state
+
+6. CUSTOM DESIGNS (/store/custom-designs)  [MANAGER + OWNER]
+   - Customer ke custom design requests
+   - Detail dekho (customer naam/phone + image + specs)
+   - "Approve & Forward" → sanitized order manufacturer ko (customer detail hata ke)
+   - Forward hone ke baad manufacturer ka LIVE STATUS bhi dikhta hai
+
+7. INTELLIGENCE (/store/intelligence)
+   - Demand signals: views, try-ons, sales (7din/30din)
+   - Recommendations: kaunsa product restock karo, kaunsa promote karo
+
+8. ANALYTICS (/store/analytics)
+   - Kiosk engagement numbers (views, try-ons, sales)
+
+9. STORE PROFILE (/store/profile)  [SIRF OWNER]
+   - Store naam, city, phone, owner detail
+   - FIXED DELIVERY ADDRESS badlo (manufacturer yahin bhejega)
+   - Branding: logo URL, tagline, website (kiosk pe dikhta hai)
+
+10. MANAGERS (/store/managers)  [SIRF OWNER]
+    - Naye manager add karo (naam/email/password)
+    - Manager activate/deactivate ya delete karo
+    - Manager reset password
+
+11. SETTINGS (/store/settings)  [SIRF OWNER]
+    - Profile + Managers ke shortcuts
+
+
+================================================================================
+  SECTION 4 — STORE MANAGER 👔
+================================================================================
+
+KAUN: Store ka staff. Owner add karta hai. Ek store ke multiple managers ho sakte.
+LOGIN: /store/manager/login  →  manager@demo.com / manager123
+PORTAL: Same as owner, LEKIN kam access (settings/managers/profile nahi dikhega)
+
+--- MANAGER KYA-KYA KAAM KAREGA ---
+
+Manager ka MAIN KAAM = APPROVALS. Customer ke orders manufacturer tak jaane se
+pehle manager check karta hai.
+
+1. DASHBOARD (/store/dashboard) — pending approvals dikhta hai
+
+2. PENDING APPROVALS (/store/pending-approvals)  [SABSE ZAROORI]
+   - Kiosk orders (customer ne kiosk pe kiya)
+   - B2B orders (store ne restock manga)
+   - Har ek ko: "Approve" (manufacturer ko bhejo) ya "Reject" (cancel)
+
+3. KIOSK ORDERS (/store/kiosk-orders)
+   - Saare kiosk orders + customer detail + status
+
+4. CUSTOM DESIGNS (/store/custom-designs)
+   - Customer ke custom design requests
+   - "Approve & Forward" → manufacturer ko sanitized bhejo
+   - "Reject" → band karo
+   - Manufacturer ka live status bhi dikhta hai
+
+5. INTELLIGENCE / ANALYTICS — dekh sakta hai
+
+--- MANAGER KYA NAHI KAR SAKTA ---
+   ✗ Naye manager add/delete (sirf owner)
+   ✗ Store profile / fixed address change (sirf owner)
+   ✗ Manufacturer catalog se B2B order PLACE karna (sirf owner)
+   ✗ Settings (sirf owner)
+   NOTE: Owner khud bhi manager ke saare kaam kar sakta hai (owner = super-manager)
+
+--- MANAGER PASSWORD BHOOL GAYA ---
+   /store/manager/forgot-password → email daalo → reset link aayega
+
+
+================================================================================
+  SECTION 5 — CUSTOMER (End User) 🛍️
+================================================================================
+
+KAUN: Store mein aane wala customer. KOI LOGIN NAHI.
+KIOSK: /<store-slug>   (demo store → http://localhost:3000/demo)
+       Har store ka apna URL. Store ka naam + logo dikhta hai (Jewel Factory nahi).
+
+--- CUSTOMER KYA-KYA KAAM KAREGA ---
+
+1. HOME (/demo)
+   - Store ka branding, hero, quick actions
+
+2. CATALOG BROWSE (/demo/catalog)
+   - MANUFACTURER ke saare active designs (store ka inventory nahi)
+   - Search, "AR Try-On only" filter
+   - KOI PRICE NAHI dikhta (bas naam, category, purity)
+
+3. PRODUCT DETAIL (/demo/catalog/JF-0001)
+   - Photos, specs (metal=Gold, purity, weight, gemstones)
+   - "Add to Bag", "Buy Now"
+   - "Try On" button (agar product mein AR asset hai)
+   - Trust badges: BIS Hallmarked, Certified
+
+4. SIMILAR IMAGE SEARCH (/demo/search)
+   - Apni photo upload karo → milte-julte designs dikhenge
+   - (Embedder chahiye — warna "warming up" message)
+
+5. AR TRY-ON (/demo/try-on)
+   - Camera on karke jewellery virtually pehen ke dekho
+   - Necklace/earring/ring/bangle — real-time face/hand tracking
+   - Side mein try-on wale products ki list
+
+6. CUSTOM DESIGN REQUEST (/demo/custom-design)
+   - Apni marzi ka design mangao:
+       • Naam + phone (zaroori)
+       • Category, weight, purity
+       • Reference image URL (optional)
+       • Notes / description
+   - Submit → store ke manager ke paas jaata hai
+
+7. CHECKOUT / ORDER (/demo/checkout)
+   - Cart review
+   - Naam + phone (email optional)
+   - Pickup in store YA home delivery (address)
+   - Notes
+   - "Place Order" → order store ke manager ke paas approval ke liye
+
+--- CUSTOMER KA DATA KAHAN JAATA HAI ---
+   Customer ka naam/phone/address SIRF STORE ke paas rehta hai.
+   Manufacturer ko kabhi nahi jaata. (Privacy rule)
+
+
+================================================================================
+  SECTION 6 — PURA ORDER FLOW (step-by-step, 3 types)
+================================================================================
+
+--- FLOW A: CUSTOMER KIOSK ORDER (customer catalog se kharidta hai) ---
+
+  1. Customer /demo/catalog pe design dekhta hai → Add to Bag → Checkout
+  2. Naam, phone, pickup/delivery bhar ke "Place Order"
+  3. Order banta hai → status: "pending store approval"
+  4. MANAGER /store/pending-approvals pe dekhta hai → "Approve"
+  5. Order manufacturer ke paas jaata hai (customer detail HATA ke)
+  6. MANUFACTURER /manufacturer/kiosk-orders pe dekhta hai:
+        - Store naam + ship-to store address + items (customer ka kuch nahi)
+  7. Manufacturer status advance karta hai → DELIVERED (store ke address pe bhejta)
+  8. Store product receive karta hai → customer ko de deta hai
+
+--- FLOW B: STORE B2B RESTOCK ORDER (store apne liye stock mangwata hai) ---
+
+  1. OWNER /store/manufacturer-catalog pe designs browse karta hai
+  2. Cart mein add → "Place Order" → status: "pending manager approval"
+  3. MANAGER (ya owner) approve karta hai
+  4. Order manufacturer ke paas jaata hai (/manufacturer/orders — store naam ke saath)
+  5. Manufacturer advance karta hai → DELIVERED
+  6. DELIVERED pe → design automatically STORE ke inventory (products) mein add
+     ho jaata hai (images + try-on asset copy ho jaate hain)
+
+--- FLOW C: CUSTOM DESIGN REQUEST (customer bespoke design mangata hai) ---
+
+  1. Customer /demo/custom-design form bharta hai (image + specs + naam/phone)
+  2. Request store ke manager ke paas jaata hai (customer detail ke SAATH)
+  3. MANAGER /store/custom-designs pe dekhta hai
+  4. "Approve & Forward" → SANITIZED order manufacturer ko (customer detail HATA ke,
+     sirf store naam + address + design specs + reference image)
+  5. MANUFACTURER /manufacturer/custom-designs pe dekhta hai (no customer data)
+  6. Manufacturer status advance → banata hai → store ke address pe bhejta
+  7. Manager ko manufacturer ka LIVE STATUS dikhta rehta hai
+
+
+================================================================================
+  SECTION 7 — KAUN KYA DEKH SAKTA HAI (Privacy Matrix)
+================================================================================
+
+  ┌────────────────────────┬──────────┬───────┬─────────┬──────────────┐
+  │ Data                   │ Customer │ Store │ Manager │ Manufacturer │
+  ├────────────────────────┼──────────┼───────┼─────────┼──────────────┤
+  │ Customer naam/phone    │ apna     │ ✅    │ ✅      │ ❌ NAHI      │
+  │ Customer ka address    │ apna     │ ✅    │ ✅      │ ❌ NAHI      │
+  │ Store ka fixed address │ ❌       │ ✅    │ ✅      │ ✅ (ship-to) │
+  │ Price / amount         │ ❌ kahin │ ❌    │ ❌      │ ❌ (no price)│
+  │ Manufacturer catalog   │ ✅ active│ ✅    │ ✅      │ ✅ (owner)   │
+  │ Design number JF-XXXX  │ ✅       │ ✅    │ ✅      │ ✅           │
+  └────────────────────────┴──────────┴───────┴─────────┴──────────────┘
+
+
+================================================================================
+  SECTION 8 — QUICK TEST SCRIPT (sab kaam kar raha hai check karo)
+================================================================================
+
+  1. Manufacturer login (admin@atjewellers.com / manufacturer123)
+     → Catalog → Add Design → photo + naam + Active → Save (JF-0001 milega)
+
+  2. Customer kiosk (http://localhost:3000/demo/catalog)
+     → wo design dikhega → Add to Bag → Checkout → naam/phone → Place Order
+
+  3. Manager login (manager@demo.com / manager123)
+     → Pending Approvals → order dikhega → Approve
+
+  4. Manufacturer → Kiosk Orders
+     → order dikhega: STORE naam + ship-to address (customer ka naam NAHI ✅)
+     → Mark as confirmed → ... → delivered
+
+  5. Custom design test:
+     → Customer /demo/custom-design → form bharo → submit
+     → Manager /store/custom-designs → Approve & Forward
+     → Manufacturer /manufacturer/custom-designs → dikhega (no customer data ✅)
+
+  6. B2B restock test:
+     → Owner login → Manufacturer Catalog → Add → Place Order
+     → Manager → Pending Approvals → Approve
+     → Manufacturer → B2B Orders → Delivered → store inventory mein add ho jaata
+
+  Sab chal gaya = system 100% working! 🎉
+
+
+================================================================================
+  SECTION 9 — SEED CREDENTIALS DOBARA (yaad rakhne ke liye)
+================================================================================
+
+  Manufacturer:   admin@atjewellers.com  /  manufacturer123   → /manufacturer/login
+  Store Owner:    store@demo.com         /  store123          → /store/login
+  Store Manager:  manager@demo.com       /  manager123        → /store/manager/login
+  Customer Kiosk: (no login)                                  → /demo
+
+  Custom manufacturer password set karna ho seed ke waqt:
+     SEED_MANUFACTURER_PASSWORD="MeraPassword" pnpm db:seed
+
+  Demo store ke saath seed:
+     SEED_DEMO_STORE=true pnpm db:seed
+
+================================================================================
+  END
+================================================================================

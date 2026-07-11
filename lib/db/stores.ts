@@ -1,0 +1,200 @@
+import { prisma } from '@/lib/prisma';
+import { hashPassword } from '@/lib/password';
+
+// ── Manufacturer-side store management ────────────────────────────────────────
+
+export async function listStoresByManufacturer(manufacturerId: string) {
+  return prisma.store.findMany({
+    where: { manufacturerId },
+    orderBy: { createdAt: 'desc' },
+    select: {
+      id: true, name: true, slug: true, email: true, city: true, phone: true,
+      isActive: true, registrationStatus: true, createdAt: true,
+    },
+  });
+}
+
+export async function listPendingRegistrations() {
+  return prisma.store.findMany({
+    where: { registrationStatus: 'PENDING' },
+    orderBy: { registrationSubmittedAt: 'desc' },
+    select: {
+      id: true, name: true, slug: true, email: true, city: true,
+      ownerName: true, ownerPhone: true,
+      addressStreet: true, addressCity: true, addressState: true, addressPincode: true, addressLandmark: true,
+      registrationSubmittedAt: true,
+    },
+  });
+}
+
+export async function approveRegistration(manufacturerId: string, storeId: string) {
+  const store = await prisma.store.findFirst({ where: { id: storeId, registrationStatus: 'PENDING' } });
+  if (!store) return null;
+  const updated = await prisma.store.update({
+    where: { id: storeId },
+    data: {
+      registrationStatus: 'APPROVED',
+      registrationReviewedAt: new Date(),
+      manufacturerId,
+      isActive: true,
+    },
+    // Return the fields the approval email needs.
+    select: {
+      id: true, name: true, slug: true, email: true, registrationStatus: true,
+      managers: { select: { email: true }, where: { isActive: true } },
+    },
+  });
+  return updated;
+}
+
+export async function rejectRegistration(storeId: string) {
+  const store = await prisma.store.findFirst({ where: { id: storeId, registrationStatus: 'PENDING' } });
+  if (!store) return null;
+  return prisma.store.update({
+    where: { id: storeId },
+    data: { registrationStatus: 'REJECTED', registrationReviewedAt: new Date(), isActive: false },
+    select: { id: true, name: true, registrationStatus: true },
+  });
+}
+
+export async function updateStoreByManufacturer(
+  manufacturerId: string,
+  storeId: string,
+  input: { name?: string; email?: string; city?: string; phone?: string },
+) {
+  const store = await prisma.store.findFirst({ where: { id: storeId, manufacturerId }, select: { id: true } });
+  if (!store) return null;
+  return prisma.store.update({
+    where: { id: storeId },
+    data: {
+      ...(input.name !== undefined ? { name: input.name } : {}),
+      ...(input.email !== undefined ? { email: input.email.toLowerCase().trim() } : {}),
+      ...(input.city !== undefined ? { city: input.city } : {}),
+      ...(input.phone !== undefined ? { phone: input.phone } : {}),
+    },
+    select: { id: true, name: true, email: true, city: true, phone: true },
+  });
+}
+
+export async function resetStorePassword(manufacturerId: string, storeId: string, newPassword: string) {
+  const store = await prisma.store.findFirst({ where: { id: storeId, manufacturerId }, select: { id: true } });
+  if (!store) return false;
+  const hash = await hashPassword(newPassword);
+  await prisma.store.update({ where: { id: storeId }, data: { passwordHash: hash } });
+  return true;
+}
+
+export async function setStoreActive(manufacturerId: string, storeId: string, isActive: boolean) {
+  const store = await prisma.store.findFirst({ where: { id: storeId, manufacturerId }, select: { id: true } });
+  if (!store) return null;
+  return prisma.store.update({ where: { id: storeId }, data: { isActive }, select: { id: true, isActive: true } });
+}
+
+export async function deleteStoreByManufacturer(manufacturerId: string, storeId: string) {
+  const store = await prisma.store.findFirst({ where: { id: storeId, manufacturerId }, select: { id: true } });
+  if (!store) return false;
+  await prisma.store.delete({ where: { id: storeId } });
+  return true;
+}
+
+// ── Store-side helpers ────────────────────────────────────────────────────────
+
+export async function updateStoreBranding(
+  storeId: string,
+  input: { logoUrl?: string | null; tagline?: string | null; websiteUrl?: string | null },
+) {
+  return prisma.store.update({
+    where: { id: storeId },
+    data: {
+      ...(input.logoUrl !== undefined ? { logoUrl: input.logoUrl } : {}),
+      ...(input.tagline !== undefined ? { tagline: input.tagline } : {}),
+      ...(input.websiteUrl !== undefined ? { websiteUrl: input.websiteUrl } : {}),
+    },
+    select: { id: true, logoUrl: true, tagline: true, websiteUrl: true },
+  });
+}
+
+export async function updateStoreProfile(
+  storeId: string,
+  input: {
+    name?: string; city?: string; phone?: string;
+    addressStreet?: string; addressCity?: string; addressState?: string;
+    addressPincode?: string; addressLandmark?: string;
+    ownerName?: string; ownerPhone?: string;
+  },
+) {
+  return prisma.store.update({
+    where: { id: storeId },
+    data: input,
+    select: {
+      id: true, name: true, city: true, phone: true,
+      addressStreet: true, addressCity: true, addressState: true, addressPincode: true, addressLandmark: true,
+      ownerName: true, ownerPhone: true,
+    },
+  });
+}
+
+export function formatStoreAddress(store: {
+  addressStreet: string | null; addressLandmark: string | null;
+  addressCity: string | null; addressState: string | null; addressPincode: string | null;
+}): string {
+  return [store.addressStreet, store.addressLandmark, store.addressCity, store.addressState, store.addressPincode]
+    .filter(Boolean)
+    .join(', ');
+}
+
+// ── Manager management (owner only) ───────────────────────────────────────────
+
+export async function listManagers(storeId: string) {
+  return prisma.storeManager.findMany({
+    where: { storeId },
+    orderBy: { createdAt: 'desc' },
+    select: { id: true, name: true, email: true, phone: true, isActive: true, createdAt: true },
+  });
+}
+
+export async function createManager(
+  storeId: string,
+  input: { name: string; email: string; password: string; phone?: string },
+) {
+  const hash = await hashPassword(input.password);
+  return prisma.storeManager.create({
+    data: {
+      storeId,
+      name: input.name,
+      email: input.email.toLowerCase().trim(),
+      passwordHash: hash,
+      phone: input.phone ?? null,
+    },
+    select: { id: true, name: true, email: true, phone: true, isActive: true },
+  });
+}
+
+export async function updateManager(
+  storeId: string,
+  managerId: string,
+  input: { name?: string; phone?: string; isActive?: boolean },
+) {
+  const mgr = await prisma.storeManager.findFirst({ where: { id: managerId, storeId }, select: { id: true } });
+  if (!mgr) return null;
+  return prisma.storeManager.update({
+    where: { id: managerId },
+    data: input,
+    select: { id: true, name: true, email: true, phone: true, isActive: true },
+  });
+}
+
+export async function resetManagerPassword(storeId: string, managerId: string, newPassword: string) {
+  const mgr = await prisma.storeManager.findFirst({ where: { id: managerId, storeId }, select: { id: true } });
+  if (!mgr) return false;
+  const hash = await hashPassword(newPassword);
+  await prisma.storeManager.update({ where: { id: managerId }, data: { passwordHash: hash } });
+  return true;
+}
+
+export async function deleteManager(storeId: string, managerId: string) {
+  const mgr = await prisma.storeManager.findFirst({ where: { id: managerId, storeId }, select: { id: true } });
+  if (!mgr) return false;
+  await prisma.storeManager.delete({ where: { id: managerId } });
+  return true;
+}

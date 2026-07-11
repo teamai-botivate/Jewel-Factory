@@ -1,0 +1,61 @@
+# Render Blueprint for Jewel Factory (optional — you can also configure in the UI).
+# Env vars marked sync:false must be set in the Render dashboard (secrets).
+services:
+  - type: web
+    name: jewel-factory
+    runtime: node
+    plan: free
+    buildCommand: pnpm install && pnpm build
+    startCommand: pnpm render-start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: COOKIE_TTL_SECONDS
+        value: "28800"
+      - key: QDRANT_MANUFACTURER_COLLECTION
+        value: jewelfactory_manufacturer_products
+      - key: FROM_NAME
+        value: Jewel Factory
+      # ── Secrets — set these in the Render dashboard (sync:false) ──
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_URL
+        sync: false
+      - key: MANUFACTURER_SECRET
+        sync: false
+      - key: STORE_SECRET
+        sync: false
+      - key: MANAGER_SECRET
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: EMBEDDER_URL
+        sync: false
+      - key: EMBEDDER_API_KEY
+        sync: false
+      - key: QDRANT_URL
+        sync: false
+      - key: QDRANT_API_KEY
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: FROM_EMAIL
+        sync: false
+      - key: NEXT_PUBLIC_APP_URL
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false

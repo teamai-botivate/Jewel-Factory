@@ -1,0 +1,572 @@
+// Jewel Factory — Prisma schema
+// Fresh single-app rebuild. Postgres (Supabase). Models are camelCase in code,
+// mapped to snake_case tables/columns for clean SQL. See JEWEL_FACTORY_SYSTEM_DESIGN.txt.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum RegistrationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ResetRole {
+  STORE_OWNER
+  STORE_MANAGER
+}
+
+enum ProductStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum JewelleryType {
+  necklace
+  earring_left
+  earring_right
+  ring_index
+  ring_middle
+  bangle
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PACKED
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum CustomStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  FORWARDED
+}
+
+enum CustomOrderStatus {
+  PENDING
+  CONFIRMED
+  IN_PRODUCTION
+  PACKED
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AUTH / IDENTITY
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Manufacturer {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  passwordHash String   @map("password_hash") // bcrypt
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  products     ManufacturerProduct[]
+  stores       Store[]
+  b2bOrders    B2bOrder[]
+  kioskOrders  KioskOrder[]
+  customOrders CustomDesignOrder[]
+
+  @@map("manufacturers")
+}
+
+model Store {
+  id             String        @id @default(uuid())
+  manufacturerId String?       @map("manufacturer_id") // null until approved
+  manufacturer   Manufacturer? @relation(fields: [manufacturerId], references: [id])
+
+  // identity / auth
+  name         String
+  slug         String  @unique // kiosk URL segment: /<slug>/...
+  email        String  @unique
+  passwordHash String  @map("password_hash") // bcrypt (store owner)
+
+  // registration
+  registrationStatus      RegistrationStatus @default(PENDING) @map("registration_status")
+  registrationSubmittedAt DateTime?          @map("registration_submitted_at")
+  registrationReviewedAt  DateTime?          @map("registration_reviewed_at")
+  ownerName               String?            @map("owner_name")
+  ownerPhone              String?            @map("owner_phone")
+
+  // branding (shown on kiosk)
+  logoUrl    String? @map("logo_url")
+  tagline    String?
+  websiteUrl String? @map("website_url")
+  city       String?
+  phone      String?
+
+  // fixed delivery address (manufacturer ships here)
+  addressStreet   String? @map("address_street")
+  addressCity     String? @map("address_city")
+  addressState    String? @map("address_state")
+  addressPincode  String? @map("address_pincode")
+  addressLandmark String? @map("address_landmark")
+
+  isActive  Boolean  @default(false) @map("is_active") // true after approval
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  managers       StoreManager[]
+  products       Product[]
+  b2bOrders      B2bOrder[]
+  kioskOrders    KioskOrder[]
+  customRequests CustomDesignRequest[]
+  customOrders   CustomDesignOrder[]
+  resetTokens    PasswordResetToken[]
+
+  @@map("stores")
+}
+
+model StoreManager {
+  id           String   @id @default(uuid())
+  storeId      String   @map("store_id")
+  store        Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  name         String
+  email        String
+  passwordHash String   @map("password_hash") // bcrypt
+  phone        String?
+  isActive     Boolean  @default(true) @map("is_active")
+  createdBy    String?  @map("created_by")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@unique([storeId, email])
+  @@index([email])
+  @@map("store_managers")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  email     String
+  role      ResetRole
+  storeId   String?   @map("store_id")
+  store     Store?    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  tokenHash String    @map("token_hash") // sha256 of emailed token
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([email])
+  @@index([tokenHash])
+  @@map("password_reset_tokens")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MANUFACTURER CATALOG (global)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model ManufacturerProduct {
+  id             String       @id @default(uuid())
+  manufacturerId String       @map("manufacturer_id")
+  manufacturer   Manufacturer @relation(fields: [manufacturerId], references: [id], onDelete: Cascade)
+
+  designNumber String        @unique @map("design_number") // JF-0001, auto-generated
+  name         String
+  category     String?
+  subCategory  String?       @map("sub_category")
+  description  String?
+  weightGrams  Decimal?      @map("weight_grams") @db.Decimal(8, 3)
+  purity       String?
+  gemstones    String[]      @default([])
+  occasionTags String[]      @default([]) @map("occasion_tags")
+  styleTags    String[]      @default([]) @map("style_tags")
+  minOrderQty  Int           @default(1) @map("min_order_qty")
+  hasTryon     Boolean       @default(false) @map("has_tryon")
+  status       ProductStatus @default(DRAFT)
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+
+  images      ManufacturerProductImage[]
+  tryonAssets TryonAsset[]
+  embedding   ManufacturerProductEmbedding?
+  b2bItems    B2bOrderItem[]
+
+  @@index([status])
+  @@index([category])
+  @@map("manufacturer_products")
+}
+
+model ManufacturerProductImage {
+  id                 String              @id @default(uuid())
+  productId          String              @map("product_id")
+  product            ManufacturerProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  cloudinaryPublicId String              @map("cloudinary_public_id")
+  secureUrl          String              @map("secure_url")
+  isPrimary          Boolean             @default(false) @map("is_primary")
+  sortOrder          Int                 @default(0) @map("sort_order")
+  createdAt          DateTime            @default(now()) @map("created_at")
+
+  @@index([productId])
+  @@map("manufacturer_product_images")
+}
+
+model ManufacturerProductEmbedding {
+  productId      String              @id @map("product_id")
+  product        ManufacturerProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  qdrantPointId  String              @map("qdrant_point_id")
+  embeddingModel String              @map("embedding_model")
+  dimensions     Int
+  imageUrl       String?             @map("image_url")
+  indexedAt      DateTime            @default(now()) @map("indexed_at")
+
+  @@map("manufacturer_product_embeddings")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// STORE RETAIL CATALOG (materialized on B2B delivery)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Product {
+  id                    String  @id @default(uuid())
+  storeId               String  @map("store_id")
+  store                 Store   @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  manufacturerProductId String? @map("manufacturer_product_id")
+
+  slug         String
+  name         String
+  category     String?
+  description  String?
+  purity       String?
+  weightGrams  Decimal? @map("weight_grams") @db.Decimal(8, 2)
+  gemstones    String[] @default([])
+  occasionTags String[] @default([]) @map("occasion_tags")
+  styleTags    String[] @default([]) @map("style_tags")
+  stockCount   Int      @default(0) @map("stock_count")
+  isActive     Boolean  @default(true) @map("is_active")
+  isFeatured   Boolean  @default(false) @map("is_featured")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  images      ProductImage[]
+  tryonAssets TryonAsset[]
+  views       ProductView[]
+  sales       ProductSale[]
+  tryonEvents TryonEvent[]
+
+  @@unique([storeId, slug])
+  @@index([storeId, isActive])
+  @@map("products")
+}
+
+model ProductImage {
+  id                 String   @id @default(uuid())
+  productId          String   @map("product_id")
+  product            Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  cloudinaryPublicId String   @map("cloudinary_public_id")
+  url                String
+  isPrimary          Boolean  @default(false) @map("is_primary")
+  sortOrder          Int      @default(0) @map("sort_order")
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  @@index([productId])
+  @@map("product_images")
+}
+
+// One try-on asset belongs to EITHER a manufacturer product OR a store product.
+model TryonAsset {
+  id                    String               @id @default(uuid())
+  manufacturerProductId String?              @map("manufacturer_product_id")
+  manufacturerProduct   ManufacturerProduct? @relation(fields: [manufacturerProductId], references: [id], onDelete: Cascade)
+  productId             String?              @map("product_id")
+  product               Product?             @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  cloudinaryPublicId String?       @map("cloudinary_public_id")
+  assetUrl           String        @map("asset_url")
+  jewelleryType      JewelleryType @map("jewellery_type")
+  pivotX             Decimal       @default(0.5) @map("pivot_x") @db.Decimal(5, 3)
+  pivotY             Decimal       @default(0.5) @map("pivot_y") @db.Decimal(5, 3)
+  xOffset            Decimal       @default(0) @map("x_offset") @db.Decimal(8, 3)
+  yOffset            Decimal       @default(0) @map("y_offset") @db.Decimal(8, 3)
+  scaleMultiplier    Decimal       @default(1) @map("scale_multiplier") @db.Decimal(5, 3)
+  rotationOffsetDeg  Decimal       @default(0) @map("rotation_offset_deg") @db.Decimal(6, 2)
+  widthMm            Decimal?      @map("width_mm") @db.Decimal(6, 2)
+  heightMm           Decimal?      @map("height_mm") @db.Decimal(6, 2)
+  isActive           Boolean       @default(true) @map("is_active")
+  createdAt          DateTime      @default(now()) @map("created_at")
+  updatedAt          DateTime      @updatedAt @map("updated_at")
+
+  @@index([manufacturerProductId])
+  @@index([productId])
+  @@map("product_tryon_assets")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ORDERS — B2B (store restock)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model B2bOrder {
+  id             String       @id @default(uuid())
+  storeId        String       @map("store_id")
+  store          Store        @relation(fields: [storeId], references: [id])
+  manufacturerId String       @map("manufacturer_id")
+  manufacturer   Manufacturer @relation(fields: [manufacturerId], references: [id])
+
+  orderNumber     String      @unique @map("order_number") // B2B-YYYYMMDD-XXXX
+  status          OrderStatus @default(PENDING)
+  deliveryAddress String      @map("delivery_address")
+  notes           String?
+  trackingNumber  String?     @map("tracking_number")
+
+  // manager approval gate
+  pendingManagerApproval Boolean   @default(true) @map("pending_manager_approval")
+  managerApprovedById    String?   @map("manager_approved_by_id")
+  managerApprovedAt      DateTime? @map("manager_approved_at")
+
+  // fulfillment
+  fulfilledAt         DateTime? @map("fulfilled_at")
+  fulfilledProductIds String[]  @default([]) @map("fulfilled_product_ids")
+
+  totalItems Int      @default(0) @map("total_items")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  items   B2bOrderItem[]
+  history B2bOrderStatusHistory[]
+
+  @@index([storeId])
+  @@index([manufacturerId])
+  @@index([status])
+  @@map("b2b_orders")
+}
+
+model B2bOrderItem {
+  id                    String              @id @default(uuid())
+  orderId               String              @map("order_id")
+  order                 B2bOrder            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  manufacturerProductId String              @map("manufacturer_product_id")
+  manufacturerProduct   ManufacturerProduct @relation(fields: [manufacturerProductId], references: [id])
+  quantity              Int
+  productNameSnapshot   String?             @map("product_name_snapshot")
+  createdAt             DateTime            @default(now()) @map("created_at")
+
+  @@index([orderId])
+  @@map("b2b_order_items")
+}
+
+model B2bOrderStatusHistory {
+  id        String   @id @default(uuid())
+  orderId   String   @map("order_id")
+  order     B2bOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status    String
+  note      String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("b2b_order_status_history")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ORDERS — KIOSK (customer, guest)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model KioskOrder {
+  id             String       @id @default(uuid())
+  manufacturerId String       @map("manufacturer_id")
+  manufacturer   Manufacturer @relation(fields: [manufacturerId], references: [id])
+  storeId        String       @map("store_id")
+  store          Store        @relation(fields: [storeId], references: [id])
+
+  // store snapshot (what manufacturer sees)
+  storeNameSnapshot  String  @map("store_name_snapshot")
+  storeCitySnapshot  String? @map("store_city_snapshot")
+  storePhoneSnapshot String? @map("store_phone_snapshot")
+  storeEmailSnapshot String? @map("store_email_snapshot")
+
+  // customer details (store-only, NEVER forwarded to manufacturer)
+  customerName    String  @map("customer_name")
+  customerPhone   String  @map("customer_phone")
+  customerEmail   String? @map("customer_email")
+  deliveryAddress String? @map("delivery_address")
+  pickupStore     Boolean @default(false) @map("pickup_store")
+  notes           String?
+
+  orderNumber    String      @unique @map("order_number") // GK-YYYYMMDD-XXXX
+  orderSource    String      @default("kiosk") @map("order_source")
+  status         OrderStatus @default(PENDING)
+  trackingNumber String?     @map("tracking_number")
+
+  // store approval gate
+  pendingStoreApproval    Boolean   @default(true) @map("pending_store_approval")
+  storeApprovedById       String?   @map("store_approved_by_id")
+  storeApprovedAt         DateTime? @map("store_approved_at")
+  forwardedToManufacturer Boolean   @default(false) @map("forwarded_to_manufacturer")
+
+  totalItems Int      @default(0) @map("total_items")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  items   KioskOrderItem[]
+  history KioskOrderStatusHistory[]
+
+  @@index([storeId])
+  @@index([manufacturerId])
+  @@index([status])
+  @@map("kiosk_orders")
+}
+
+model KioskOrderItem {
+  id                    String     @id @default(uuid())
+  orderId               String     @map("order_id")
+  order                 KioskOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  manufacturerProductId String?    @map("manufacturer_product_id")
+  productNameSnapshot   String     @map("product_name_snapshot")
+  productImageSnapshot  String?    @map("product_image_snapshot")
+  categorySnapshot      String?    @map("category_snapshot")
+  quantity              Int
+  createdAt             DateTime   @default(now()) @map("created_at")
+
+  @@index([orderId])
+  @@map("kiosk_order_items")
+}
+
+model KioskOrderStatusHistory {
+  id        String     @id @default(uuid())
+  orderId   String     @map("order_id")
+  order     KioskOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status    String
+  note      String?
+  changedBy String?    @map("changed_by") // store / manufacturer / system
+  createdAt DateTime   @default(now()) @map("created_at")
+
+  @@map("kiosk_order_status_history")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CUSTOM DESIGN (customer request -> sanitized manufacturer order)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model CustomDesignRequest {
+  id      String @id @default(uuid())
+  storeId String @map("store_id")
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  // customer PII — never forwarded to manufacturer
+  customerName  String  @map("customer_name")
+  customerPhone String  @map("customer_phone")
+  customerNotes String? @map("customer_notes")
+
+  referenceImageUrl      String?      @map("reference_image_url")
+  referenceImagePublicId String?      @map("reference_image_public_id")
+  category               String
+  weightGrams            Decimal?     @map("weight_grams") @db.Decimal(8, 3)
+  purity                 String?
+  designNotes            String?      @map("design_notes")
+  status                 CustomStatus @default(PENDING)
+  reviewedById           String?      @map("reviewed_by_id") // null = owner reviewed
+  reviewedAt             DateTime?    @map("reviewed_at")
+  rejectionReason        String?      @map("rejection_reason")
+  createdAt              DateTime     @default(now()) @map("created_at")
+  updatedAt              DateTime     @updatedAt @map("updated_at")
+
+  order CustomDesignOrder?
+
+  @@index([storeId])
+  @@index([status])
+  @@map("custom_design_requests")
+}
+
+model CustomDesignOrder {
+  id             String              @id @default(uuid())
+  requestId      String              @unique @map("request_id")
+  request        CustomDesignRequest @relation(fields: [requestId], references: [id])
+  manufacturerId String              @map("manufacturer_id")
+  manufacturer   Manufacturer        @relation(fields: [manufacturerId], references: [id])
+  storeId        String              @map("store_id")
+  store          Store               @relation(fields: [storeId], references: [id])
+
+  // store identity snapshot (no customer PII)
+  storeNameSnapshot    String  @map("store_name_snapshot")
+  storeAddressSnapshot String  @map("store_address_snapshot")
+  category             String
+  weightGrams          Decimal? @map("weight_grams") @db.Decimal(8, 3)
+  purity               String?
+  referenceImageUrl    String? @map("reference_image_url")
+  designNotes          String? @map("design_notes")
+
+  status         CustomOrderStatus @default(PENDING)
+  orderNumber    String            @unique @map("order_number") // CD-YYYYMMDD-XXXX
+  trackingNumber String?           @map("tracking_number")
+  createdAt      DateTime          @default(now()) @map("created_at")
+  updatedAt      DateTime          @updatedAt @map("updated_at")
+
+  @@index([manufacturerId])
+  @@index([storeId])
+  @@map("custom_design_orders")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TAXONOMY
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Category {
+  id        String @id @default(uuid())
+  slug      String @unique
+  name      String
+  sortOrder Int    @default(0) @map("sort_order")
+
+  @@map("categories")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INTELLIGENCE (KEPT) — store-scoped signals
+// ─────────────────────────────────────────────────────────────────────────────
+
+model ProductView {
+  id        String   @id @default(uuid())
+  storeId   String   @map("store_id")
+  productId String?  @map("product_id")
+  product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  sessionId String?  @map("session_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([storeId, createdAt])
+  @@map("product_views")
+}
+
+model TryonEvent {
+  id            String   @id @default(uuid())
+  storeId       String   @map("store_id")
+  productId     String?  @map("product_id")
+  product       Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  jewelleryType String?  @map("jewellery_type")
+  confidence    Decimal? @db.Decimal(5, 3)
+  sessionId     String?  @map("session_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@index([storeId, createdAt])
+  @@map("tryon_events")
+}
+
+model ProductSale {
+  id        String   @id @default(uuid())
+  storeId   String   @map("store_id")
+  productId String   @map("product_id")
+  product   Product  @relation(fields: [productId], references: [id])
+  quantity  Int      @default(1)
+  soldAt    DateTime @default(now()) @map("sold_at")
+  occasion  String?
+  notes     String?
+
+  @@index([storeId, soldAt])
+  @@index([storeId, productId])
+  @@map("product_sales")
+}
