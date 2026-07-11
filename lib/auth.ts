@@ -23,16 +23,19 @@ export const MANAGER_COOKIE = 'jf_manager';
 
 export type CookieOptions = {
   httpOnly: true;
-  sameSite: 'strict';
+  sameSite: 'lax';
   secure: boolean;
   path: string;
   maxAge: number;
 };
 
+// SameSite=Lax (not Strict): still CSRF-safe for our POST APIs, but the cookie
+// is reliably sent on top-level navigations right after login. Strict was
+// dropping the cookie on the post-login redirect → guard 401 → bounce to login.
 export function cookieOptions(ttlSeconds: number, secure: boolean): CookieOptions {
   return {
     httpOnly: true,
-    sameSite: 'strict',
+    sameSite: 'lax',
     secure,
     path: '/',
     maxAge: ttlSeconds,

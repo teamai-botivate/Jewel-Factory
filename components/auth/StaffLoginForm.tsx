@@ -2,7 +2,6 @@
 
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -27,7 +26,6 @@ export function StaffLoginForm({
   footerLinks?: FooterLink[];
   forgotHref?: string;
 }) {
-  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -56,10 +54,11 @@ export function StaffLoginForm({
         );
         return;
       }
-      router.push(redirectTo);
+      // Full-page navigation (not router.push) so the just-set auth cookie is
+      // committed and sent on the dashboard's first API call.
+      window.location.assign(redirectTo);
     } catch {
       setError('Network error. Please try again.');
-    } finally {
       setLoading(false);
     }
   }
