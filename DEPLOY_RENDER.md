@@ -99,7 +99,9 @@ QDRANT_API_KEY=<qdrant-api-key>
 QDRANT_MANUFACTURER_COLLECTION=jewelfactory_manufacturer_products
 
 SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
+SMTP_PORT=465
+# IMPORTANT: use 465 (implicit TLS) on Render — Render blocks outbound port 587,
+# which causes "Connection timeout (ETIMEDOUT)" and emails never send. 465 works.
 SMTP_USER=<your-gmail>
 SMTP_PASS=<gmail-app-password>
 FROM_EMAIL=<your-gmail>
