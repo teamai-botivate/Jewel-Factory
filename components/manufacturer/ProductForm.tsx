@@ -7,8 +7,8 @@ import { useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { uploadToCloudinary } from '@/lib/upload-client';
+import { CATEGORIES, subCategoriesFor } from '@/lib/categories';
 
-const CATEGORIES = ['ring', 'earring', 'necklace', 'bangle', 'bracelet', 'pendant', 'chain', 'nose-pin', 'anklet', 'mangalsutra'];
 const PURITIES = ['24K', '22K', '18K', '14K', '916', '750', '585'];
 const JEWELLERY_TYPES = ['necklace', 'earring_left', 'earring_right', 'ring_index', 'ring_middle', 'bangle'] as const;
 
@@ -50,6 +50,26 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
 
   const set = (k: keyof ProductFormData) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
     setForm((p) => ({ ...p, [k]: e.target.value }));
+
+  // Sub-categories depend on the chosen category. Changing category resets sub-cat.
+  const subOptions = subCategoriesFor(form.category);
+  // "Custom" sub-category mode: no preset list, or an existing value that isn't in
+  // the list (e.g. free text the user typed, or a legacy value). Then show a text box.
+  const [subCustom, setSubCustom] = useState<boolean>(
+    Boolean(initial?.subCategory && !subCategoriesFor(initial.category).includes(initial.subCategory)),
+  );
+
+  function onCategoryChange(e: React.ChangeEvent<HTMLSelectElement>) {
+    const category = e.target.value;
+    setForm((p) => ({ ...p, category, subCategory: '' })); // reset sub on category change
+    setSubCustom(false);
+  }
+
+  function onSubSelectChange(e: React.ChangeEvent<HTMLSelectElement>) {
+    const v = e.target.value;
+    if (v === '__other__') { setSubCustom(true); setForm((p) => ({ ...p, subCategory: '' })); }
+    else { setSubCustom(false); setForm((p) => ({ ...p, subCategory: v })); }
+  }
 
   // Create the product first (needed for image/tryon upload folder), then return its id.
   async function ensureProductId(): Promise<string | null> {
@@ -184,14 +204,39 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
             <label className="text-xs font-medium text-muted-foreground">Category</label>
-            <select className="mt-1 h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm" value={form.category} onChange={set('category')}>
+            <select className="mt-1 h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm" value={form.category} onChange={onCategoryChange}>
               <option value="">Select category</option>
               {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
           <div>
-            <label className="text-xs font-medium text-muted-foreground">Sub-category</label>
-            <Input className="mt-1" placeholder="e.g. Chandbali" value={form.subCategory} onChange={set('subCategory')} />
+            <label className="text-xs font-medium text-muted-foreground">Sub-category <span className="font-normal">(optional)</span></label>
+            {subOptions.length > 0 && !subCustom ? (
+              <select
+                className="mt-1 h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+                value={form.subCategory}
+                onChange={onSubSelectChange}
+                disabled={!form.category}
+              >
+                <option value="">—</option>
+                {subOptions.map((s) => <option key={s} value={s}>{s}</option>)}
+                <option value="__other__">Other (type your own)…</option>
+              </select>
+            ) : (
+              <div className="mt-1 flex gap-2">
+                <Input
+                  placeholder={form.category ? 'Type a sub-category' : 'Select a category first'}
+                  value={form.subCategory}
+                  onChange={set('subCategory')}
+                  disabled={!form.category}
+                />
+                {subOptions.length > 0 && (
+                  <button type="button" onClick={() => { setSubCustom(false); setForm((p) => ({ ...p, subCategory: '' })); }} className="shrink-0 text-xs text-muted-foreground hover:text-foreground">
+                    List
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
         <div className="grid gap-3 sm:grid-cols-3">

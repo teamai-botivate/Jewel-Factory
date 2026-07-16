@@ -5,11 +5,14 @@ import { useEffect, useState } from 'react';
 
 import { Input } from '@/components/ui/input';
 import { ProductCard, type KioskProduct } from '@/components/kiosk/ProductCard';
+import { CATEGORIES, subCategoriesFor } from '@/lib/categories';
 
 export default function KioskCatalogPage() {
   const [products, setProducts] = useState<KioskProduct[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [category, setCategory] = useState('');
+  const [subCategory, setSubCategory] = useState('');
   const [tryOnOnly, setTryOnOnly] = useState(false);
 
   useEffect(() => {
@@ -25,6 +28,8 @@ export default function KioskCatalogPage() {
 
   const filtered = (products ?? []).filter((p) =>
     (!search || p.name.toLowerCase().includes(search.toLowerCase()) || p.designNumber.toLowerCase().includes(search.toLowerCase())) &&
+    (!category || p.category === category) &&
+    (!subCategory || p.subCategory === subCategory) &&
     (!tryOnOnly || p.hasTryon),
   );
 
@@ -37,6 +42,16 @@ export default function KioskCatalogPage() {
 
       <div className="mb-6 flex flex-wrap items-center gap-3">
         <Input placeholder="Search designs…" value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-xs" />
+        <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={category} onChange={(e) => { setCategory(e.target.value); setSubCategory(''); }}>
+          <option value="">All categories</option>
+          {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+        </select>
+        {subCategoriesFor(category).length > 0 && (
+          <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={subCategory} onChange={(e) => setSubCategory(e.target.value)}>
+            <option value="">All sub-categories</option>
+            {subCategoriesFor(category).map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+        )}
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" checked={tryOnOnly} onChange={(e) => setTryOnOnly(e.target.checked)} className="accent-[#C29A33]" />
           AR Try-On only

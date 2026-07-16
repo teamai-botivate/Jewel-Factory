@@ -7,14 +7,15 @@ import { useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useKioskStore } from '@/components/kiosk/StoreContext';
+import { CATEGORIES, subCategoriesFor } from '@/lib/categories';
 
-const CATEGORIES = ['ring', 'earring', 'necklace', 'bangle', 'bracelet', 'pendant', 'chain', 'nose-pin', 'anklet', 'mangalsutra'];
 const PURITIES = ['24K', '22K', '18K', '14K', '916', '750', '585'];
 
 export default function CustomDesignPage() {
   const store = useKioskStore();
   const base = `/${store.slug}`;
-  const [form, setForm] = useState({ name: '', phone: '', category: 'necklace', weight: '', purity: '', notes: '', imageUrl: '' });
+  const [form, setForm] = useState({ name: '', phone: '', category: CATEGORIES[0], subCategory: '', weight: '', purity: '', notes: '', imageUrl: '' });
+  const [subCustom, setSubCustom] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
@@ -23,6 +24,13 @@ export default function CustomDesignPage() {
   const fileInput = useRef<HTMLInputElement>(null);
 
   function set(k: string, v: string) { setForm((p) => ({ ...p, [k]: v })); }
+
+  const subOptions = subCategoriesFor(form.category);
+  function onCategoryChange(v: string) { setForm((p) => ({ ...p, category: v, subCategory: '' })); setSubCustom(false); }
+  function onSubSelectChange(v: string) {
+    if (v === '__other__') { setSubCustom(true); set('subCategory', ''); }
+    else { setSubCustom(false); set('subCategory', v); }
+  }
 
   async function handleUpload(file: File) {
     setError(null);
@@ -70,7 +78,7 @@ export default function CustomDesignPage() {
           storeSlug: store.slug,
           customerName: form.name.trim(),
           customerPhone: form.phone.trim(),
-          category: form.category,
+          category: form.subCategory.trim() ? `${form.category} — ${form.subCategory.trim()}` : form.category,
           weightGrams: form.weight ? Number(form.weight) : undefined,
           purity: form.purity || undefined,
           notes: form.notes.trim() || undefined,
@@ -105,13 +113,32 @@ export default function CustomDesignPage() {
           <div><label className="text-xs font-medium text-muted-foreground">Your Name *</label><Input className="mt-1" value={form.name} onChange={(e) => set('name', e.target.value)} required /></div>
           <div><label className="text-xs font-medium text-muted-foreground">Phone *</label><Input className="mt-1" type="tel" value={form.phone} onChange={(e) => set('phone', e.target.value)} required /></div>
         </div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <label className="text-xs font-medium text-muted-foreground">Category</label>
-            <select className="mt-1 h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm" value={form.category} onChange={(e) => set('category', e.target.value)}>
+            <select className="mt-1 h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm" value={form.category} onChange={(e) => onCategoryChange(e.target.value)}>
               {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground">Sub-category <span className="font-normal">(optional)</span></label>
+            {subOptions.length > 0 && !subCustom ? (
+              <select className="mt-1 h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm" value={form.subCategory} onChange={(e) => onSubSelectChange(e.target.value)}>
+                <option value="">—</option>
+                {subOptions.map((s) => <option key={s} value={s}>{s}</option>)}
+                <option value="__other__">Other (type your own)…</option>
+              </select>
+            ) : (
+              <div className="mt-1 flex gap-2">
+                <Input placeholder="Type a sub-category" value={form.subCategory} onChange={(e) => set('subCategory', e.target.value)} />
+                {subOptions.length > 0 && (
+                  <button type="button" onClick={() => { setSubCustom(false); set('subCategory', ''); }} className="shrink-0 text-xs text-muted-foreground hover:text-foreground">List</button>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div><label className="text-xs font-medium text-muted-foreground">Weight (g)</label><Input className="mt-1" type="number" step="0.1" value={form.weight} onChange={(e) => set('weight', e.target.value)} /></div>
           <div>
             <label className="text-xs font-medium text-muted-foreground">Purity</label>

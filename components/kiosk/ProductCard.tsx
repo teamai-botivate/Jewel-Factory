@@ -12,6 +12,7 @@ export type KioskProduct = {
   designNumber: string;
   name: string;
   category: string | null;
+  subCategory: string | null;
   purity: string | null;
   hasTryon: boolean;
   images: { secureUrl: string; isPrimary: boolean }[];

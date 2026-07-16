@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { CATEGORIES, subCategoriesFor } from '@/lib/categories';
 
 type ProductImage = { id: string; secureUrl: string; isPrimary: boolean };
 type Product = {
@@ -13,6 +14,7 @@ type Product = {
   designNumber: string;
   name: string;
   category: string | null;
+  subCategory: string | null;
   status: 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
   hasTryon: boolean;
   images: ProductImage[];
@@ -27,6 +29,8 @@ const STATUS_COLORS: Record<string, string> = {
 export default function ManufacturerCatalogPage() {
   const [products, setProducts] = useState<Product[] | null>(null);
   const [search, setSearch] = useState('');
+  const [category, setCategory] = useState('');
+  const [subCategory, setSubCategory] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   async function load() {
@@ -43,12 +47,15 @@ export default function ManufacturerCatalogPage() {
 
   useEffect(() => { void load(); }, []);
 
-  const filtered = (products ?? []).filter(
-    (p) =>
+  const filtered = (products ?? []).filter((p) => {
+    const matchSearch =
       !search ||
       p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.designNumber.toLowerCase().includes(search.toLowerCase()),
-  );
+      p.designNumber.toLowerCase().includes(search.toLowerCase());
+    const matchCat = !category || p.category === category;
+    const matchSub = !subCategory || p.subCategory === subCategory;
+    return matchSearch && matchCat && matchSub;
+  });
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-5">
@@ -64,7 +71,30 @@ export default function ManufacturerCatalogPage() {
         </Link>
       </div>
 
-      <Input placeholder="Search by name or design number…" value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-sm" />
+      <div className="flex flex-wrap gap-2">
+        <Input placeholder="Search by name or design number…" value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-xs" />
+        <select
+          className="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
+          value={category}
+          onChange={(e) => { setCategory(e.target.value); setSubCategory(''); }}
+        >
+          <option value="">All categories</option>
+          {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+        </select>
+        {subCategoriesFor(category).length > 0 && (
+          <select
+            className="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
+            value={subCategory}
+            onChange={(e) => setSubCategory(e.target.value)}
+          >
+            <option value="">All sub-categories</option>
+            {subCategoriesFor(category).map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+        )}
+        {(category || subCategory || search) && (
+          <button type="button" onClick={() => { setSearch(''); setCategory(''); setSubCategory(''); }} className="text-xs text-muted-foreground hover:text-foreground">Clear</button>
+        )}
+      </div>
 
       {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
 
@@ -113,7 +143,7 @@ export default function ManufacturerCatalogPage() {
                   </div>
                   <div className="p-3">
                     <p className="truncate text-sm font-medium">{p.name}</p>
-                    <p className="text-xs text-muted-foreground">{p.designNumber}{p.category ? ` · ${p.category}` : ''}</p>
+                    <p className="text-xs text-muted-foreground">{p.designNumber}{p.category ? ` · ${p.category}` : ''}{p.subCategory ? ` › ${p.subCategory}` : ''}</p>
                   </div>
                 </div>
               </Link>

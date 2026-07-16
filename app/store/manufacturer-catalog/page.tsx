@@ -8,20 +8,28 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useApi, apiPost } from '@/hooks/use-api';
 import { useB2bCart } from '@/hooks/use-b2b-cart';
+import { CATEGORIES, subCategoriesFor } from '@/lib/categories';
 
 type Img = { secureUrl: string; isPrimary: boolean };
-type Product = { id: string; designNumber: string; name: string; category: string | null; hasTryon: boolean; images: Img[] };
+type Product = { id: string; designNumber: string; name: string; category: string | null; subCategory: string | null; hasTryon: boolean; images: Img[] };
 
 export default function ManufacturerCatalogBrowsePage() {
   const { data, error, loading } = useApi<Product[]>('/api/store/catalog', '/store/login');
   const cart = useB2bCart();
   const router = useRouter();
   const [search, setSearch] = useState('');
+  const [category, setCategory] = useState('');
+  const [subCategory, setSubCategory] = useState('');
   const [showCart, setShowCart] = useState(false);
   const [notes, setNotes] = useState('');
   const [placing, setPlacing] = useState(false);
 
-  const filtered = (data ?? []).filter((p) => !search || p.name.toLowerCase().includes(search.toLowerCase()) || p.designNumber.toLowerCase().includes(search.toLowerCase()));
+  const filtered = (data ?? []).filter((p) => {
+    const matchSearch = !search || p.name.toLowerCase().includes(search.toLowerCase()) || p.designNumber.toLowerCase().includes(search.toLowerCase());
+    const matchCat = !category || p.category === category;
+    const matchSub = !subCategory || p.subCategory === subCategory;
+    return matchSearch && matchCat && matchSub;
+  });
 
   async function placeOrder() {
     setPlacing(true);
@@ -50,7 +58,22 @@ export default function ManufacturerCatalogBrowsePage() {
         </Button>
       </div>
 
-      <Input placeholder="Search designs…" value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-sm" />
+      <div className="flex flex-wrap gap-2">
+        <Input placeholder="Search designs…" value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-xs" />
+        <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={category} onChange={(e) => { setCategory(e.target.value); setSubCategory(''); }}>
+          <option value="">All categories</option>
+          {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+        </select>
+        {subCategoriesFor(category).length > 0 && (
+          <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={subCategory} onChange={(e) => setSubCategory(e.target.value)}>
+            <option value="">All sub-categories</option>
+            {subCategoriesFor(category).map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+        )}
+        {(category || subCategory || search) && (
+          <button type="button" onClick={() => { setSearch(''); setCategory(''); setSubCategory(''); }} className="text-xs text-muted-foreground hover:text-foreground">Clear</button>
+        )}
+      </div>
 
       {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
       {loading && <div className="flex items-center gap-2 py-12 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>}

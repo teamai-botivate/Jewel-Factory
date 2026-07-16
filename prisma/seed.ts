@@ -12,29 +12,19 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
+import { CATEGORIES, categorySlug } from '../lib/categories';
+
 const prisma = new PrismaClient();
 
-const CATEGORIES = [
-  { slug: 'ring', name: 'Ring' },
-  { slug: 'earring', name: 'Earring' },
-  { slug: 'necklace', name: 'Necklace' },
-  { slug: 'bangle', name: 'Bangle' },
-  { slug: 'bracelet', name: 'Bracelet' },
-  { slug: 'pendant', name: 'Pendant' },
-  { slug: 'chain', name: 'Chain' },
-  { slug: 'nose-pin', name: 'Nose Pin' },
-  { slug: 'anklet', name: 'Anklet' },
-  { slug: 'mangalsutra', name: 'Mangalsutra' },
-];
-
 async function main() {
-  // 1. Categories
+  // 1. Categories — single source of truth is lib/categories.ts
   for (let i = 0; i < CATEGORIES.length; i++) {
-    const c = CATEGORIES[i];
+    const name = CATEGORIES[i];
+    const slug = categorySlug(name);
     await prisma.category.upsert({
-      where: { slug: c.slug },
-      update: { name: c.name, sortOrder: i },
-      create: { slug: c.slug, name: c.name, sortOrder: i },
+      where: { slug },
+      update: { name, sortOrder: i },
+      create: { slug, name, sortOrder: i },
     });
   }
   console.log(`Seeded ${CATEGORIES.length} categories.`);
