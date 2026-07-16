@@ -18,7 +18,9 @@
 export const MANUFACTURER_COOKIE = 'jf_manufacturer';
 export const STORE_COOKIE = 'jf_store';
 export const MANAGER_COOKIE = 'jf_manager';
+export const BRANCH_MANAGER_COOKIE = 'jf_branch_manager'; // store-manager login (per branch)
 export const KIOSK_COOKIE = 'jf_kiosk'; // per-store kiosk device unlock
+export const RESTOCK_COOKIE = 'jf_restock'; // per-branch restock PIN unlock
 
 // ── Cookie option shape (for hono/next setCookie) ─────────────────────────────
 
@@ -206,4 +208,46 @@ export async function verifyKioskCookie(
 ): Promise<boolean> {
   const parts = await verifyToken(token, `${opts.secret}:kiosk`, opts.ttlSeconds, 1);
   return !!parts && parts[0] === storeId;
+}
+
+// ── Branch-manager (Store Manager) cookie: <branchManagerId>.<branchId>.<retailerId>
+// Carries the retailerId so the guard can set the tenant (shopScope) with no DB hop,
+// exactly like the store cookie does.
+
+export async function issueBranchManagerCookie(
+  branchManagerId: string,
+  branchId: string,
+  retailerId: string,
+  opts: { secret: string; ttlSeconds: number },
+): Promise<string> {
+  return issueToken(opts.secret, [branchManagerId, branchId, retailerId], opts.ttlSeconds);
+}
+
+export async function verifyBranchManagerCookie(
+  token: string | undefined,
+  opts: { secret: string; ttlSeconds: number },
+): Promise<{ valid: true; branchManagerId: string; branchId: string; retailerId: string } | { valid: false }> {
+  const parts = await verifyToken(token, opts.secret, opts.ttlSeconds, 3);
+  if (!parts || !UUID_RE.test(parts[0]!) || !UUID_RE.test(parts[1]!) || !UUID_RE.test(parts[2]!)) return { valid: false };
+  return { valid: true, branchManagerId: parts[0]!, branchId: parts[1]!, retailerId: parts[2]! };
+}
+
+// ── Restock PIN unlock cookie: <branchId> (namespaced) ────────────────────────
+// Set after a Store Manager enters the branch restock PIN on a device. Gates the
+// restock page so a customer holding the kiosk device can't open it.
+
+export async function issueRestockCookie(
+  branchId: string,
+  opts: { secret: string; ttlSeconds: number },
+): Promise<string> {
+  return issueToken(`${opts.secret}:restock`, [branchId], opts.ttlSeconds);
+}
+
+export async function verifyRestockCookie(
+  token: string | undefined,
+  branchId: string,
+  opts: { secret: string; ttlSeconds: number },
+): Promise<boolean> {
+  const parts = await verifyToken(token, `${opts.secret}:restock`, opts.ttlSeconds, 1);
+  return !!parts && parts[0] === branchId;
 }

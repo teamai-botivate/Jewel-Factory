@@ -12,6 +12,9 @@ const ServerEnvSchema = z.object({
   MANUFACTURER_SECRET: z.string().min(32),
   STORE_SECRET: z.string().min(32),
   MANAGER_SECRET: z.string().min(32),
+  // Store-manager (branch) login secret. Optional so existing deploys don't break;
+  // falls back to MANAGER_SECRET at use-site. Set a distinct value in production.
+  BRANCH_MANAGER_SECRET: z.string().min(32).optional(),
   COOKIE_TTL_SECONDS: z.coerce.number().default(28800),
 
   CLOUDINARY_CLOUD_NAME: z.string().optional(),

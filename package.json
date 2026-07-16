@@ -15,7 +15,8 @@
     "db:deploy": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
-    "migrate:categories": "tsx prisma/migrate-categories.ts"
+    "migrate:categories": "tsx prisma/migrate-categories.ts",
+    "migrate:branches": "tsx prisma/migrate-branches.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

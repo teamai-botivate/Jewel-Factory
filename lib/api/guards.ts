@@ -6,9 +6,11 @@ import {
   MANUFACTURER_COOKIE,
   STORE_COOKIE,
   MANAGER_COOKIE,
+  BRANCH_MANAGER_COOKIE,
   verifyManufacturerCookie,
   verifyStoreCookie,
   verifyManagerCookie,
+  verifyBranchManagerCookie,
 } from '@/lib/auth';
 import { sendError } from './envelope';
 
@@ -18,10 +20,17 @@ import { sendError } from './envelope';
  */
 export type AppVariables = {
   manufacturerId: string;
-  storeId: string;
+  storeId: string; // for a branch manager, this is the RETAILER id (tenant)
   managerId: string; // for owner, this equals storeId (owner acts as itself)
   isOwner: boolean;
+  branchId: string; // set by branchManagerGuard
+  branchManagerId: string; // set by branchManagerGuard
 };
+
+/** Branch-manager secret, falling back to MANAGER_SECRET when unset. */
+function branchManagerSecret(env: { BRANCH_MANAGER_SECRET?: string; MANAGER_SECRET: string }): string {
+  return env.BRANCH_MANAGER_SECRET ?? env.MANAGER_SECRET;
+}
 
 export type AppEnv = { Variables: AppVariables };
 
@@ -78,6 +87,22 @@ export const managerGuard: MiddlewareHandler<AppEnv> = async (c, next) => {
   c.set('storeId', mgrResult.storeId);
   c.set('managerId', mgrResult.managerId);
   c.set('isOwner', false);
+  await next();
+};
+
+// ── branchManagerGuard: Store Manager (per branch) ────────────────────────────
+// Sets branchId + branchManagerId, and storeId = retailerId so existing
+// tenant-scoped DB helpers (which take the retailer/store id) work unchanged.
+export const branchManagerGuard: MiddlewareHandler<AppEnv> = async (c, next) => {
+  const env = getServerEnv();
+  const result = await verifyBranchManagerCookie(getCookie(c, BRANCH_MANAGER_COOKIE), {
+    secret: branchManagerSecret(env),
+    ttlSeconds: env.COOKIE_TTL_SECONDS,
+  });
+  if (!result.valid) return sendError(c, 'unauthorized', 'Store manager login required', 401);
+  c.set('branchManagerId', result.branchManagerId);
+  c.set('branchId', result.branchId);
+  c.set('storeId', result.retailerId); // retailer = tenant
   await next();
 };
 

@@ -131,6 +131,7 @@ model Store {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   managers       StoreManager[]
+  branches       Branch[]
   products       Product[]
   b2bOrders      B2bOrder[]
   kioskOrders    KioskOrder[]
@@ -139,6 +140,66 @@ model Store {
   resetTokens    PasswordResetToken[]
 
   @@map("stores")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BRANCH (a Retailer's individual shop/store) + its Store Manager
+//
+// Terminology note (see SYSTEM_FLOW.txt):
+//   Store model      = "Retailer"       (the business dealing with the manufacturer)
+//   StoreManager     = "HO Manager"     (Head-Office manager, does all approvals)
+//   Branch           = "Store"          (one physical shop of the retailer)
+//   BranchManager    = "Store Manager"  (runs one branch's kiosk + restock)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Branch {
+  id        String @id @default(uuid())
+  retailerId String @map("retailer_id") // -> Store (the retailer)
+  retailer   Store  @relation(fields: [retailerId], references: [id], onDelete: Cascade)
+
+  name String
+
+  // fixed delivery address of THIS branch (kept by HO; manufacturer never sees it)
+  addressStreet   String? @map("address_street")
+  addressCity     String? @map("address_city")
+  addressState    String? @map("address_state")
+  addressPincode  String? @map("address_pincode")
+  addressLandmark String? @map("address_landmark")
+  phone           String?
+
+  // PIN wall for the branch's restock page (so a customer holding the kiosk
+  // device can't open restock). Null = no PIN set yet.
+  restockPinHash String? @map("restock_pin_hash")
+
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  managers       BranchManager[]
+  kioskOrders    KioskOrder[]
+  b2bOrders      B2bOrder[]
+  customRequests CustomDesignRequest[]
+
+  @@index([retailerId])
+  @@map("branches")
+}
+
+model BranchManager {
+  id           String   @id @default(uuid())
+  branchId     String   @map("branch_id")
+  branch       Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  name         String
+  email        String
+  passwordHash String   @map("password_hash") // bcrypt
+  phone        String?
+  isActive     Boolean  @default(true) @map("is_active")
+  createdBy    String?  @map("created_by")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@unique([branchId, email])
+  @@index([email])
+  @@map("branch_managers")
 }
 
 model StoreManager {
@@ -324,11 +385,15 @@ model B2bOrder {
   store          Store        @relation(fields: [storeId], references: [id])
   manufacturerId String       @map("manufacturer_id")
   manufacturer   Manufacturer @relation(fields: [manufacturerId], references: [id])
+  branchId       String?      @map("branch_id") // set when a branch's restock raised it
+  branch         Branch?      @relation(fields: [branchId], references: [id])
 
   orderNumber     String      @unique @map("order_number") // B2B-YYYYMMDD-XXXX
   status          OrderStatus @default(PENDING)
   deliveryAddress String      @map("delivery_address")
   notes           String?
+  requirementNote String?     @map("requirement_note") // editable (Store Mgr + HO)
+  branchNameSnapshot String?  @map("branch_name_snapshot")
   trackingNumber  String?     @map("tracking_number")
 
   // manager approval gate
@@ -390,20 +455,29 @@ model KioskOrder {
   manufacturer   Manufacturer @relation(fields: [manufacturerId], references: [id])
   storeId        String       @map("store_id")
   store          Store        @relation(fields: [storeId], references: [id])
+  branchId       String?      @map("branch_id") // which branch raised it (null = legacy)
+  branch         Branch?      @relation(fields: [branchId], references: [id])
 
   // store snapshot (what manufacturer sees)
   storeNameSnapshot  String  @map("store_name_snapshot")
   storeCitySnapshot  String? @map("store_city_snapshot")
   storePhoneSnapshot String? @map("store_phone_snapshot")
   storeEmailSnapshot String? @map("store_email_snapshot")
+  branchNameSnapshot String? @map("branch_name_snapshot") // which branch, for HO
 
-  // customer details (store-only, NEVER forwarded to manufacturer)
-  customerName    String  @map("customer_name")
-  customerPhone   String  @map("customer_phone")
+  // customer details — NOW OPTIONAL. Store manager keeps customer data outside the
+  // system; the requirement is captured in `requirementNote` instead. Kept nullable
+  // for backward-compat with legacy kiosk orders that stored PII.
+  customerName    String? @map("customer_name")
+  customerPhone   String? @map("customer_phone")
   customerEmail   String? @map("customer_email")
   deliveryAddress String? @map("delivery_address")
   pickupStore     Boolean @default(false) @map("pickup_store")
   notes           String?
+
+  // Editable requirement note (customer's ask). Store Manager writes it; HO Manager
+  // can edit it; it IS forwarded to the manufacturer (no personal data).
+  requirementNote String? @map("requirement_note")
 
   orderNumber    String      @unique @map("order_number") // GK-YYYYMMDD-XXXX
   orderSource    String      @default("kiosk") @map("order_source")
@@ -464,10 +538,12 @@ model CustomDesignRequest {
   id      String @id @default(uuid())
   storeId String @map("store_id")
   store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  branchId String? @map("branch_id") // which branch raised it
+  branch   Branch? @relation(fields: [branchId], references: [id])
 
-  // customer PII — never forwarded to manufacturer
-  customerName  String  @map("customer_name")
-  customerPhone String  @map("customer_phone")
+  // customer PII — NOW OPTIONAL (store manager keeps it outside the system).
+  customerName  String? @map("customer_name")
+  customerPhone String? @map("customer_phone")
   customerNotes String? @map("customer_notes")
 
   referenceImageUrl      String?      @map("reference_image_url")
