@@ -257,10 +257,6 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
           </div>
         </div>
         <div>
-          <label className="text-xs font-medium text-muted-foreground">Description</label>
-          <textarea className="mt-1 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm min-h-[80px]" placeholder="Design details, motif, occasion." value={form.description} onChange={set('description')} />
-        </div>
-        <div>
           <label className="text-xs font-medium text-muted-foreground">Status</label>
           <select className="mt-1 h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm max-w-[200px]" value={form.status} onChange={set('status')}>
             <option value="DRAFT">Draft (hidden from stores)</option>
@@ -332,6 +328,12 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
             <input ref={tryonInput} type="file" accept="image/png,image/webp" hidden onChange={(e) => e.target.files?.[0] && handleTryonUpload(e.target.files[0])} />
           </div>
         )}
+      </section>
+
+      {/* Description — moved to the bottom, after photos + AR try-on. */}
+      <section>
+        <label className="text-xs font-medium text-muted-foreground">Description</label>
+        <textarea className="mt-1 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm min-h-[80px]" placeholder="Design details, motif, occasion." value={form.description} onChange={set('description')} />
       </section>
 
       {error && <p className="text-sm text-red-600">{error}</p>}

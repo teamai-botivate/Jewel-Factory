@@ -6,6 +6,7 @@ import { useState } from 'react';
 
 import { useKioskStore } from './StoreContext';
 import { useGuestCart } from '@/hooks/use-guest-cart';
+import { titleCaseName, productMetaLine } from '@/lib/format';
 
 export type KioskProduct = {
   id: string;
@@ -14,6 +15,7 @@ export type KioskProduct = {
   category: string | null;
   subCategory: string | null;
   purity: string | null;
+  weightGrams: string | null;
   hasTryon: boolean;
   images: { secureUrl: string; isPrimary: boolean }[];
 };
@@ -50,8 +52,10 @@ export function ProductCard({ product }: { product: KioskProduct }) {
           </span>
         </div>
         <div className="p-3">
-          <p className="truncate text-sm font-semibold group-hover:text-primary">{product.name}</p>
-          <p className="text-xs text-muted-foreground">{product.category ?? 'Jewellery'} · Gold {product.purity ?? ''}</p>
+          <p className="truncate text-sm font-semibold group-hover:text-primary">{titleCaseName(product.name)}</p>
+          <p className="truncate text-xs text-muted-foreground">
+            {productMetaLine({ category: product.category ?? 'Jewellery', subCategory: product.subCategory, purity: product.purity, weight: product.weightGrams })}
+          </p>
           <button onClick={addToCart} className="metal-sheen mt-2 w-full rounded-full py-1.5 text-xs font-semibold text-[#17120b] transition-transform hover:scale-[1.02]">
             {added ? <><Check className="mr-1 inline h-3.5 w-3.5" />Added</> : <><Plus className="mr-1 inline h-3.5 w-3.5" />Add to Bag</>}
           </button>

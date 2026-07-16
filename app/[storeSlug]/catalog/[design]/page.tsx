@@ -8,9 +8,11 @@ import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useKioskStore } from '@/components/kiosk/StoreContext';
 import { useGuestCart } from '@/hooks/use-guest-cart';
+import { titleCaseName, formatWeight } from '@/lib/format';
 
 type Product = {
   id: string; designNumber: string; name: string; category: string | null;
+  subCategory: string | null;
   description: string | null; purity: string | null; weightGrams: string | null;
   gemstones: string[]; occasionTags: string[]; hasTryon: boolean;
   images: { secureUrl: string; isPrimary: boolean }[];
@@ -75,8 +77,8 @@ export default function KioskProductDetailPage() {
         {/* Info */}
         <div className="space-y-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-primary">{product.category ?? 'Jewellery'}</p>
-            <h1 className="mt-1 text-3xl font-medium tracking-tight">{product.name}</h1>
+            <p className="text-xs font-semibold uppercase tracking-widest text-primary">{product.category ?? 'Jewellery'}{product.subCategory ? ` · ${product.subCategory}` : ''}</p>
+            <h1 className="mt-1 text-3xl font-medium tracking-tight">{titleCaseName(product.name)}</h1>
             <p className="mt-1 text-sm text-muted-foreground">Design {product.designNumber}</p>
           </div>
 
@@ -118,12 +120,18 @@ export default function KioskProductDetailPage() {
           <div className="overflow-hidden rounded-xl border">
             <Spec label="Metal" value="Gold" />
             {product.purity && <Spec label="Purity" value={product.purity} alt />}
-            {product.weightGrams && <Spec label="Weight" value={`${product.weightGrams} g`} />}
+            {formatWeight(product.weightGrams) && <Spec label="Weight" value={formatWeight(product.weightGrams)!} />}
             {product.gemstones.length > 0 && <Spec label="Gemstones" value={product.gemstones.join(', ')} alt />}
             <Spec label="Category" value={product.category ?? '—'} />
+            {product.subCategory && <Spec label="Sub-category" value={product.subCategory} alt />}
           </div>
 
-          {product.description && <p className="text-sm leading-relaxed text-muted-foreground">{product.description}</p>}
+          {product.description && product.description.trim().length >= 4 && (
+            <div>
+              <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Description</p>
+              <p className="text-sm leading-relaxed text-muted-foreground">{product.description}</p>
+            </div>
+          )}
         </div>
       </div>
     </main>

@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { CATEGORIES, subCategoriesFor } from '@/lib/categories';
+import { titleCaseName, formatWeight } from '@/lib/format';
 
 type ProductImage = { id: string; secureUrl: string; isPrimary: boolean };
 type Product = {
@@ -15,6 +16,7 @@ type Product = {
   name: string;
   category: string | null;
   subCategory: string | null;
+  weightGrams: string | null;
   status: 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
   hasTryon: boolean;
   images: ProductImage[];
@@ -142,8 +144,9 @@ export default function ManufacturerCatalogPage() {
                     </span>
                   </div>
                   <div className="p-3">
-                    <p className="truncate text-sm font-medium">{p.name}</p>
-                    <p className="text-xs text-muted-foreground">{p.designNumber}{p.category ? ` · ${p.category}` : ''}{p.subCategory ? ` › ${p.subCategory}` : ''}</p>
+                    <p className="truncate text-sm font-medium">{titleCaseName(p.name)}</p>
+                    <p className="truncate text-xs text-muted-foreground">{p.designNumber}{p.category ? ` · ${p.category}` : ''}{p.subCategory ? ` › ${p.subCategory}` : ''}</p>
+                    {formatWeight(p.weightGrams) && <p className="text-xs text-muted-foreground">{formatWeight(p.weightGrams)}</p>}
                   </div>
                 </div>
               </Link>

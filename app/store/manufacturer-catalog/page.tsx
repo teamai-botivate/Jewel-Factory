@@ -9,9 +9,10 @@ import { Input } from '@/components/ui/input';
 import { useApi, apiPost } from '@/hooks/use-api';
 import { useB2bCart } from '@/hooks/use-b2b-cart';
 import { CATEGORIES, subCategoriesFor } from '@/lib/categories';
+import { titleCaseName, formatWeight } from '@/lib/format';
 
 type Img = { secureUrl: string; isPrimary: boolean };
-type Product = { id: string; designNumber: string; name: string; category: string | null; subCategory: string | null; hasTryon: boolean; images: Img[] };
+type Product = { id: string; designNumber: string; name: string; category: string | null; subCategory: string | null; weightGrams: string | null; hasTryon: boolean; images: Img[] };
 
 export default function ManufacturerCatalogBrowsePage() {
   const { data, error, loading } = useApi<Product[]>('/api/store/catalog', '/store/login');
@@ -123,7 +124,12 @@ export default function ManufacturerCatalogBrowsePage() {
                   {p.hasTryon && <span className="metal-sheen absolute right-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-bold text-[#17120b]"><Sparkles className="mr-0.5 inline h-2.5 w-2.5" />AR</span>}
                 </div>
                 <div className="p-3 space-y-2">
-                  <div><p className="truncate text-sm font-medium">{p.name}</p><p className="text-xs text-muted-foreground">{p.designNumber}</p></div>
+                  <div>
+                    <p className="truncate text-sm font-medium">{titleCaseName(p.name)}</p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {p.designNumber}{p.category ? ` · ${p.category}` : ''}{p.subCategory ? ` › ${p.subCategory}` : ''}{formatWeight(p.weightGrams) ? ` · ${formatWeight(p.weightGrams)}` : ''}
+                    </p>
+                  </div>
                   <Button size="sm" variant={inCart ? 'outline' : 'default'} className={`w-full ${inCart ? 'border-green-300 text-green-700' : 'metal-sheen text-[#17120b] font-semibold'}`}
                     onClick={() => cart.add({ productId: p.id, name: p.name, designNumber: p.designNumber, imageUrl: img?.secureUrl })}>
                     {inCart ? <><Check className="mr-1 h-3.5 w-3.5" />In cart</> : <><Plus className="mr-1 h-3.5 w-3.5" />Add</>}
