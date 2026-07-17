@@ -175,29 +175,37 @@ QDRANT_MANUFACTURER_COLLECTION="jewelfactory_manufacturer_products"   # waise hi
 
 ---
 
-## STEP 5 — Embedder (OpenCLIP) 🧠  [OPTIONAL — abhi skip kar sakte ho]
+## STEP 5 — AI-Features service 🧠  [OPTIONAL — abhi skip kar sakte ho]
 
-Similar-image search ke liye ek Python service chahiye jo photo ko vector mein
-badalti hai. Do options:
+**Ek hi Python service saara AI karta hai** — photo (visual) search KE SAATH
+"Generate with AI" (catalog image + transparent PNG + name/description). Repo:
+`github.com/teamai-botivate/Jewel-Factory_AI` → HuggingFace **Docker Space** pe deploy.
+(Uska apna `README.md` + `CLAUDE.md` deploy steps deta hai.)
 
 **Option A — Abhi skip karo (recommended for first run):**
-
 ```
-EMBEDDER_URL=""       # khaali
-EMBEDDER_API_KEY=""   # khaali
+EMBEDDER_URL=""
+EMBEDDER_API_KEY=""
+AI_FEATURES_URL=""
+AI_FEATURES_API_KEY=""
 ```
+Sab chalega, bas photo-search "warming up" dikhega + "Generate with AI" button hidden.
 
-Sab chalega, bas `/search` page pe "warming up" message aayega.
-
-**Option B — Purana LuxeMatch wala HF Space use karo:**
-LuxeMatch already ek embedder HuggingFace pe deploy kar chuka hai. Wahi use kar sakte ho:
-
+**Option B — AI-Features deploy karke use karo:**
+1. `Jewel-Factory_AI` repo ko HF Docker Space pe deploy karo.
+2. Us Space pe `OPENAI_API_KEY` set karo (gpt-image + gpt-4o ke liye). Optional:
+   `EMBEDDER_API_KEY` (Bearer, `/embed/*`), `AI_FEATURES_API_KEY` (x-api-key).
+3. URL milega. Yahan bharo (dono EMBEDDER_URL + AI_FEATURES_URL = **same** URL):
 ```
-EMBEDDER_URL="https://botivate2026-embedder.hf.space"
-EMBEDDER_API_KEY=""   # agar koi key set nahi, khaali
+EMBEDDER_URL="https://<user>-ai-features.hf.space"       # visual search (/embed/image)
+EMBEDDER_API_KEY=""                                       # jo Space pe set kiya
+AI_FEATURES_URL="https://<user>-ai-features.hf.space"     # same URL — AI generate
+AI_FEATURES_API_KEY=""                                    # jo Space pe set kiya
 ```
+(Verify: `<URL>/health` → `{"ok":true,"openai":true}`.)
 
-(Confirm karo ye Space abhi live hai — `https://botivate2026-embedder.hf.space/health` khol ke dekho.)
+> Embedder ab AI-Features me merged hai — koi alag embedder Space nahi chahiye.
+> `/embed/image` ka contract same hai, toh Jewel Factory code me kuch nahi badalna.
 
 ---
 
@@ -251,10 +259,11 @@ NEXT_PUBLIC_APP_URL="http://localhost:3000"
 DATABASE_URL="postgresql://postgres.abcd:MyPass123@aws-0-ap-south-1.pooler.supabase.com:6543/postgres?pgbouncer=true"
 DIRECT_URL="postgresql://postgres.abcd:MyPass123@aws-0-ap-south-1.pooler.supabase.com:5432/postgres"
 
-# Auth secrets
+# Auth secrets (4 — each 64 hex chars)
 MANUFACTURER_SECRET="a1b2c3...64chars"
 STORE_SECRET="d4e5f6...64chars"
 MANAGER_SECRET="g7h8i9...64chars"
+BRANCH_MANAGER_SECRET="j0k1l2...64chars"   # Store Manager login
 COOKIE_TTL_SECONDS="28800"
 
 # Cloudinary
@@ -263,9 +272,11 @@ CLOUDINARY_API_KEY="123456789012345"
 CLOUDINARY_API_SECRET="abcXXXXXXXX"
 NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME="dxxxxxxxx"
 
-# Vector search (optional)
-EMBEDDER_URL=""
+# AI-Features service (visual search + AI generate) — one URL, optional
+EMBEDDER_URL=""            # AI-Features Space URL (embedder merged here)
 EMBEDDER_API_KEY=""
+AI_FEATURES_URL=""         # same URL as EMBEDDER_URL
+AI_FEATURES_API_KEY=""
 QDRANT_URL="https://xxxx.aws.cloud.qdrant.io:6333"
 QDRANT_API_KEY="tumhara-key"
 QDRANT_MANUFACTURER_COLLECTION="jewelfactory_manufacturer_products"

@@ -126,6 +126,30 @@
   Manager can message each other on the order at any point.
 
 --------------------------------------------------------------------------------
+ 4c. MANUFACTURER "ADD DESIGN" + GENERATE WITH AI (optional)
+--------------------------------------------------------------------------------
+
+  Manufacturer adds designs at /manufacturer/catalog/new. Manual flow (always):
+     enter Design Name -> upload catalog photo(s) -> optional try-on PNG -> Save.
+     (Design number JF-XXXX is auto. No price, gold only.)
+
+  GENERATE WITH AI (shown only if AI_FEATURES_URL is configured):
+     Manufacturer has a RAW product photo (phone photo, background, not studio).
+     1. Upload the raw photo (temporary — NOT saved), pick category/weight/purity.
+     2. "Generate with AI" calls the AI-Features service and fills:
+          - Design Name + Description   (from image + specs)
+          - Catalog image               (attractive luxury studio version)
+          - Transparent try-on PNG      (background-free, for AR)
+     3. Everything is EDITABLE — manufacturer reviews and can:
+          - Regenerate any output
+          - Regenerate WITH a custom instruction (e.g. "simpler background")
+     4. Save (manual review always).
+
+  AI is OPTIONAL. If not configured, the button is hidden and manual add works
+  exactly the same. All AI lives in ONE service (see section 10). Requests are
+  proxied server-side (/api/manufacturer/ai/*) so the AI key never hits the browser.
+
+--------------------------------------------------------------------------------
  5. SHIPPING & ADDRESSES
 --------------------------------------------------------------------------------
 
@@ -189,6 +213,26 @@
 
   FRESH DB (new client): just `pnpm db:deploy` + `pnpm db:seed` — nothing manual.
   Full client setup: HANDOVER.md.
+
+--------------------------------------------------------------------------------
+ 10. AI SERVICES (one Python service, separate deploy)
+--------------------------------------------------------------------------------
+
+  All AI runs in ONE separate service: "AI-Features"
+    repo:   github.com/teamai-botivate/Jewel-Factory_AI
+    deploy: Hugging Face Docker Space (like the old embedder)
+    URL:    AI_FEATURES_URL  (Jewel Factory env)
+
+  Endpoints (one service, many features):
+    /catalog      raw photo            -> attractive studio catalog image
+    /transparent  raw photo + type     -> background-free try-on PNG
+    /describe     image + specs        -> designName + description
+    /embed/*      image/text           -> OpenCLIP vectors (VISUAL SEARCH)
+                  ^ the old embedder is MERGED here. EMBEDDER_URL now points at
+                    the SAME Space; /embed/image contract unchanged.
+
+  So there is ONE URL for everything AI. Future AI feature = new endpoint in the
+  same service, no new deployment. Needs OPENAI_API_KEY on the service.
 
 ================================================================================
  END
