@@ -154,9 +154,15 @@ export default function StoreManagerHome() {
               <Sparkles className="h-4 w-4" /> Open Try-On
             </Link>
           </div>
-          <div className="relative aspect-[16/10] w-full overflow-hidden sm:aspect-[16/9] md:aspect-auto md:h-full md:min-h-[300px]">
+          <div className="relative aspect-[16/10] w-full overflow-hidden bg-[#2a1f15] sm:aspect-[16/9] md:aspect-auto md:h-full md:min-h-[300px]">
+            {/* Gold-only business: show a real catalog piece (prefer a try-on one),
+                falling back to a gold jewellery photo. */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=900&q=85" alt="Try-on inspiration" className="absolute inset-0 h-full w-full object-cover object-center" />
+            <img
+              src={(() => { const p = products.find((x) => x.hasTryon) ?? products[0]; return (p && primary(p)) || 'https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=900&q=85'; })()}
+              alt="Gold jewellery"
+              className="absolute inset-0 h-full w-full object-cover object-center"
+            />
           </div>
         </div>
       </section>
