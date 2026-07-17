@@ -79,12 +79,20 @@ COOKIE_TTL_SECONDS=28800      # 8 ghante
    QDRANT_API_KEY=<key>
    QDRANT_MANUFACTURER_COLLECTION=jewelfactory_manufacturer_products
    ```
-2. Embedder (photo → vector) — LuxeMatch ka HF Space reuse kar sakte ho:
+2. Embedder + AI (photo → vector, aur AI generate) — **ek hi service**: `AI-Features`
+   (repo: `github.com/teamai-botivate/Jewel-Factory_AI`, HF Docker Space pe deploy).
+   Ye ek Space `/embed/*` (photo-search) + `/catalog` `/transparent` `/describe`
+   (AI generate) dono deta hai. Deploy karke (uska apna `HANDOVER`/`README` dekho),
+   URL milega, phir:
    ```
-   EMBEDDER_URL=https://botivate2026-embedder.hf.space
-   EMBEDDER_API_KEY=
+   EMBEDDER_URL=https://<user>-ai-features.hf.space      # photo-search (/embed/image)
+   EMBEDDER_API_KEY=<Bearer key agar set kiya>
+   AI_FEATURES_URL=https://<user>-ai-features.hf.space   # same URL — AI generate
+   AI_FEATURES_API_KEY=<x-api-key agar set kiya>
    ```
-   Skip karna ho to `QDRANT_URL`, `EMBEDDER_URL` khaali chhod do — photo-search band, baaki chalega.
+   AI-Features Space pe `OPENAI_API_KEY` (gpt-image + gpt-4o) set karna zaroori.
+   Skip karna ho: `QDRANT_URL`/`EMBEDDER_URL`/`AI_FEATURES_URL` khaali → photo-search +
+   "Generate with AI" button band, baaki sab chalega (manual add works).
 
 ---
 
