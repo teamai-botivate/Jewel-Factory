@@ -34,8 +34,8 @@ export default function StoreManagerHome() {
 
   return (
     <div className="space-y-10">
-      {/* ── LuxeMatch-style hero ───────────────────────────────────────────── */}
-      <section className="relative -mx-4 min-h-[calc(100svh-160px)] overflow-hidden bg-[#211711]">
+      {/* ── LuxeMatch-style hero (full-bleed past the max-w-6xl main box) ───── */}
+      <section className="relative left-1/2 right-1/2 -mx-[50vw] w-screen min-h-[calc(100svh-160px)] overflow-hidden bg-[#211711]">
         {/* Faded showroom backdrop */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
