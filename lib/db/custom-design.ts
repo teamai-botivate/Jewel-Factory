@@ -16,8 +16,9 @@ function orderNumber(): string {
 
 export async function placeCustomRequest(input: {
   storeId: string;
-  customerName: string;
-  customerPhone: string;
+  branchId?: string | null;
+  customerName?: string | null;
+  customerPhone?: string | null;
   customerNotes?: string;
   referenceImageUrl?: string;
   referenceImagePublicId?: string;
@@ -29,8 +30,9 @@ export async function placeCustomRequest(input: {
   return prisma.customDesignRequest.create({
     data: {
       storeId: input.storeId,
-      customerName: input.customerName,
-      customerPhone: input.customerPhone,
+      branchId: input.branchId ?? null,
+      customerName: input.customerName ?? null,
+      customerPhone: input.customerPhone ?? null,
       customerNotes: input.customerNotes ?? null,
       referenceImageUrl: input.referenceImageUrl ?? null,
       referenceImagePublicId: input.referenceImagePublicId ?? null,

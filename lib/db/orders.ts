@@ -27,16 +27,19 @@ export type KioskItemInput = {
 export async function placeKioskOrder(input: {
   storeId: string;
   manufacturerId: string;
+  branchId?: string | null;
+  branchNameSnapshot?: string | null;
   storeNameSnapshot: string;
   storeCitySnapshot?: string;
   storePhoneSnapshot?: string;
   storeEmailSnapshot?: string;
-  customerName: string;
-  customerPhone: string;
+  customerName?: string | null;
+  customerPhone?: string | null;
   customerEmail?: string;
   deliveryAddress?: string;
   pickupStore: boolean;
   notes?: string;
+  requirementNote?: string | null;
   items: KioskItemInput[];
 }) {
   const totalItems = input.items.reduce((s, i) => s + i.quantity, 0);
@@ -44,16 +47,19 @@ export async function placeKioskOrder(input: {
     data: {
       storeId: input.storeId,
       manufacturerId: input.manufacturerId,
+      branchId: input.branchId ?? null,
+      branchNameSnapshot: input.branchNameSnapshot ?? null,
       storeNameSnapshot: input.storeNameSnapshot,
       storeCitySnapshot: input.storeCitySnapshot ?? null,
       storePhoneSnapshot: input.storePhoneSnapshot ?? null,
       storeEmailSnapshot: input.storeEmailSnapshot ?? null,
-      customerName: input.customerName,
-      customerPhone: input.customerPhone,
+      customerName: input.customerName ?? null,
+      customerPhone: input.customerPhone ?? null,
       customerEmail: input.customerEmail ?? null,
       deliveryAddress: input.pickupStore ? null : (input.deliveryAddress ?? null),
       pickupStore: input.pickupStore,
       notes: input.notes ?? null,
+      requirementNote: input.requirementNote ?? null,
       orderNumber: orderNumber('GK'),
       totalItems,
       items: {
@@ -160,8 +166,11 @@ export async function advanceKioskOrderStatus(manufacturerId: string, id: string
 export async function placeB2bOrder(input: {
   storeId: string;
   manufacturerId: string;
+  branchId?: string | null;
+  branchNameSnapshot?: string | null;
   deliveryAddress: string;
   notes?: string;
+  requirementNote?: string | null;
   items: { manufacturerProductId: string; quantity: number; productNameSnapshot?: string; productImageSnapshot?: string; productDesignSnapshot?: string }[];
 }) {
   const totalItems = input.items.reduce((s, i) => s + i.quantity, 0);
@@ -169,9 +178,12 @@ export async function placeB2bOrder(input: {
     data: {
       storeId: input.storeId,
       manufacturerId: input.manufacturerId,
+      branchId: input.branchId ?? null,
+      branchNameSnapshot: input.branchNameSnapshot ?? null,
       orderNumber: orderNumber('B2B'),
       deliveryAddress: input.deliveryAddress,
       notes: input.notes ?? null,
+      requirementNote: input.requirementNote ?? null,
       totalItems,
       items: {
         create: input.items.map((i) => ({

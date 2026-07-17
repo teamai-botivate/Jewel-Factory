@@ -13,6 +13,7 @@ import { storePortalRoutes } from './routes/store-portal';
 import { storeCatalogRoutes } from './routes/store-catalog';
 import { storeOpsRoutes } from './routes/store-ops';
 import { managerAuthRoutes } from './routes/manager-auth';
+import { branchManagerRoutes } from './routes/branch-manager';
 import { kioskRoutes } from './routes/kiosk';
 
 export const app = new Hono<AppEnv>().basePath('/api');
@@ -48,6 +49,9 @@ app.route('/store', storeOpsRoutes);
 
 // Manager auth + operations
 app.route('/manager', managerAuthRoutes);
+
+// Store Manager (branch) — login + branch-scoped kiosk/restock (per-route guarded)
+app.route('/branch-manager', branchManagerRoutes);
 
 // Kiosk (public — customer, no login)
 app.route('/kiosk', kioskRoutes);
