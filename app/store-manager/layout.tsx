@@ -1,6 +1,6 @@
 'use client';
 
-import { Loader2, LogOut, Gem, PencilLine, Package, LayoutDashboard, Sparkles, Search } from 'lucide-react';
+import { Loader2, LogOut, Gem, PencilLine, Package, LayoutDashboard, Sparkles, Search, Shield, Award, Camera, Users } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { createContext, useContext, type ReactNode } from 'react';
@@ -94,10 +94,52 @@ function Shell({ children }: { children: ReactNode }) {
           </nav>
         </header>
         <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">{children}</main>
-        <footer className="mt-auto border-t bg-[#1A1A1A] py-8 text-center text-white/70">
-          <p className="font-display text-lg">{data.retailer.name}</p>
-          {data.retailer.tagline && <p className="mt-1 text-sm text-white/50">{data.retailer.tagline}</p>}
-          <p className="mt-3 text-xs text-white/40">{data.branch.name} · Powered by Jewel Factory</p>
+
+        {/* Rich footer — trust strip + link columns (no Staff Portal) */}
+        <footer className="mt-auto bg-[#1A1A1A] text-white/70">
+          {/* Trust strip */}
+          <div className="mx-auto grid max-w-[1400px] grid-cols-2 gap-6 border-b border-white/10 px-6 py-8 md:grid-cols-4 lg:px-10">
+            {[
+              { icon: Shield, label: 'BIS Hallmarked' },
+              { icon: Award, label: 'Certified Jewellers' },
+              { icon: Camera, label: 'Virtual Try-On' },
+              { icon: Users, label: 'Staff Assisted' },
+            ].map(({ icon: Icon, label }) => (
+              <div key={label} className="flex items-center gap-3">
+                <Icon className="h-5 w-5 text-[#e4cf8f]" />
+                <span className="text-sm font-medium text-white/85">{label}</span>
+              </div>
+            ))}
+          </div>
+          {/* Link columns */}
+          <div className="mx-auto grid max-w-[1400px] grid-cols-2 gap-8 px-6 py-10 md:grid-cols-3 lg:px-10">
+            <div>
+              <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-white/40">Discover</p>
+              <ul className="space-y-2 text-sm text-white/70">
+                <li><Link href="/store-manager/kiosk" className="hover:text-white">Catalog</Link></li>
+                <li><Link href="/store-manager/try-on" className="hover:text-white">Virtual Try-On</Link></li>
+                <li><Link href="/store-manager/search" className="hover:text-white">Search by Photo</Link></li>
+              </ul>
+            </div>
+            <div>
+              <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-white/40">Store</p>
+              <ul className="space-y-2 text-sm text-white/70">
+                <li><Link href="/store-manager/custom-design" className="hover:text-white">Custom Design</Link></li>
+                <li><Link href="/store-manager/restock" className="hover:text-white">Restock</Link></li>
+                <li><Link href="/store-manager" className="hover:text-white">Home</Link></li>
+              </ul>
+            </div>
+            <div>
+              <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-white/40">Retailer</p>
+              <p className="text-sm text-white/70">{data.retailer.name}</p>
+              <p className="mt-1 text-sm text-white/50">{data.branch.name}</p>
+              {data.retailer.city && <p className="mt-1 text-sm text-white/50">{data.retailer.city}</p>}
+            </div>
+          </div>
+          <div className="border-t border-white/10 px-6 py-5 text-center lg:px-10">
+            <p className="font-display text-base">{data.retailer.name}</p>
+            <p className="mt-1 text-xs text-white/40">Powered by Jewel Factory</p>
+          </div>
         </footer>
       </div>
     </Ctx.Provider>

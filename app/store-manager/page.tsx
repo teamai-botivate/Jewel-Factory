@@ -1,15 +1,15 @@
 'use client';
 
-import { Gem, PencilLine, Package, ArrowRight, Sparkles, Search, ShieldCheck, Camera, X } from 'lucide-react';
+import { Gem, PencilLine, Package, ArrowRight, Sparkles, Search, ShieldCheck, Camera, X, Award } from 'lucide-react';
 import Link from 'next/link';
 import { motion } from 'motion/react';
 import { useEffect, useState } from 'react';
 
-import { titleCaseName } from '@/lib/format';
+import { titleCaseName, productMetaLine } from '@/lib/format';
 import { useStoreManager } from './layout';
 
 type Img = { secureUrl: string; isPrimary: boolean };
-type Product = { id: string; designNumber: string; name: string; category: string | null; images: Img[] };
+type Product = { id: string; designNumber: string; name: string; category: string | null; subCategory: string | null; purity: string | null; weightGrams: string | null; hasTryon: boolean; images: Img[] };
 
 const primary = (p: Product) => (p.images.find((i) => i.isPrimary) ?? p.images[0])?.secureUrl;
 
@@ -123,7 +123,76 @@ export default function StoreManagerHome() {
           <Card href="/store-manager/restock" icon={Package} title="Restock" desc="Order stock for this store." locked={me.branch.hasRestockPin} />
         </div>
       </section>
+
+      {/* ── Popular now (dark section, top catalog products) ─────────────────── */}
+      {products.length > 0 && (
+        <section className="relative left-1/2 right-1/2 -mx-[50vw] w-screen bg-[#1b1612] py-14 text-white md:py-20">
+          <div className="mx-auto max-w-[1400px] px-6 lg:px-10">
+            <div className="mb-8 flex items-end justify-between gap-6">
+              <div>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-[0.24em] text-[#e4cf8f]">Popular now</p>
+                <h2 className="font-display text-3xl font-normal md:text-5xl">Pieces drawing attention</h2>
+              </div>
+              <Link href="/store-manager/kiosk" className="luxury-link-underline hidden text-sm font-semibold text-white/65 hover:text-white sm:inline-flex">View catalogue</Link>
+            </div>
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-6 xl:grid-cols-4">
+              {products.slice(0, 4).map((p) => <MiniCard key={p.id} p={p} dark />)}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ── Virtual Try-On banner ───────────────────────────────────────────── */}
+      <section className="mx-auto w-full max-w-[1400px]">
+        <div className="grid overflow-hidden rounded-2xl bg-[#211913] text-white md:grid-cols-[1.1fr_0.9fr]">
+          <div className="px-6 py-10 md:px-10 md:py-14">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.24em] text-[#e4cf8f]">Virtual try-on</p>
+            <h2 className="font-display max-w-xl text-3xl font-normal leading-tight md:text-5xl">Bring the piece closer before you decide.</h2>
+            <p className="mt-5 max-w-md text-sm leading-6 text-white/68">Preview necklaces, earrings, rings, and bangles live on the kiosk with the customer.</p>
+            <Link href="/store-manager/try-on" className="metal-sheen mt-8 inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold text-[#17120b] transition-transform hover:scale-[1.02]">
+              <Sparkles className="h-4 w-4" /> Open Try-On
+            </Link>
+          </div>
+          <div className="relative aspect-[16/10] w-full overflow-hidden sm:aspect-[16/9] md:aspect-auto md:h-full md:min-h-[300px]">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=900&q=85" alt="Try-on inspiration" className="absolute inset-0 h-full w-full object-cover object-center" />
+          </div>
+        </div>
+      </section>
+
+      {/* ── More to explore ─────────────────────────────────────────────────── */}
+      {products.length > 4 && (
+        <section className="mx-auto w-full max-w-[1400px]">
+          <div className="mb-8">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.24em] text-primary">Discover</p>
+            <h2 className="font-display text-3xl font-normal md:text-5xl">More to explore</h2>
+          </div>
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-6 xl:grid-cols-4">
+            {products.slice(4, 12).map((p) => <MiniCard key={p.id} p={p} />)}
+          </div>
+        </section>
+      )}
     </div>
+  );
+}
+
+function MiniCard({ p, dark }: { p: Product; dark?: boolean }) {
+  const img = primary(p);
+  return (
+    <Link href="/store-manager/kiosk" className="group block overflow-hidden rounded-lg bg-[#FBF9F5] ring-1 ring-black/5 transition-all hover:-translate-y-1 hover:shadow-[0_18px_40px_rgba(31,24,15,0.16)]">
+      <div className="relative aspect-[3/4] overflow-hidden bg-[#ece5da]">
+        {img ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={img} alt={p.name} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" />
+        ) : null}
+        {p.hasTryon && <span className="metal-sheen absolute right-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-bold text-[#17120b]"><Sparkles className="mr-0.5 inline h-2.5 w-2.5" />AR</span>}
+        <span className="absolute bottom-2 right-2 inline-flex items-center gap-0.5 rounded-full bg-[#f7fff8]/90 px-1.5 py-0.5 text-[9px] font-semibold text-[#15803D]"><Award className="h-2.5 w-2.5" />BIS</span>
+      </div>
+      <div className="p-3">
+        <p className="truncate text-sm font-semibold text-[#1f1a14] group-hover:text-primary">{titleCaseName(p.name)}</p>
+        <p className="truncate text-xs text-[#6f675e]">{productMetaLine({ category: p.category, subCategory: p.subCategory, purity: p.purity, weight: p.weightGrams })}</p>
+      </div>
+    </Link>
   );
 }
 
