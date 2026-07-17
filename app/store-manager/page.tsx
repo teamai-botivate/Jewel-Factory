@@ -35,7 +35,7 @@ export default function StoreManagerHome() {
   return (
     <div className="space-y-10">
       {/* ── LuxeMatch-style hero (full-bleed past the max-w-6xl main box) ───── */}
-      <section className="relative left-1/2 right-1/2 -mx-[50vw] w-screen min-h-[calc(100svh-160px)] overflow-hidden bg-[#211711]">
+      <section className="relative left-1/2 w-screen -translate-x-1/2 min-h-[calc(100svh-160px)] overflow-hidden bg-[#211711]">
         {/* Faded showroom backdrop */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
@@ -126,7 +126,7 @@ export default function StoreManagerHome() {
 
       {/* ── Popular now (dark section, top catalog products) ─────────────────── */}
       {products.length > 0 && (
-        <section className="relative left-1/2 right-1/2 -mx-[50vw] w-screen bg-[#1b1612] py-14 text-white md:py-20">
+        <section className="relative left-1/2 w-screen -translate-x-1/2 bg-[#1b1612] py-14 text-white md:py-20">
           <div className="mx-auto max-w-[1400px] px-6 lg:px-10">
             <div className="mb-8 flex items-end justify-between gap-6">
               <div>
