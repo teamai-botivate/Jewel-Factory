@@ -76,7 +76,7 @@ export default function StoreManagerCustomDesignPage() {
   }
 
   return (
-    <div className="mx-auto max-w-lg">
+    <div className="mx-auto max-w-lg px-4 py-6">
       <div className="mb-4 flex items-center gap-2 text-primary"><PencilLine className="h-5 w-5" /><span className="text-xs font-semibold uppercase tracking-widest">Custom Design</span></div>
       <h1 className="font-display text-2xl font-medium tracking-tight">New custom request</h1>
       <p className="mt-1 text-sm text-muted-foreground">Capture the customer&apos;s requirement. No customer personal details are stored here — keep those with you.</p>

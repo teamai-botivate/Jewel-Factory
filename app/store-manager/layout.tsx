@@ -93,7 +93,7 @@ function Shell({ children }: { children: ReactNode }) {
             ))}
           </nav>
         </header>
-        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">{children}</main>
+        <main className="w-full flex-1">{children}</main>
 
         {/* Rich footer — trust strip + link columns (no Staff Portal) */}
         <footer className="mt-auto bg-[#1A1A1A] text-white/70">

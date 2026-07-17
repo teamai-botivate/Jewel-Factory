@@ -40,7 +40,7 @@ export default function StoreManagerSearchPage() {
   }
 
   return (
-    <main className="mx-auto max-w-6xl">
+    <main className="mx-auto max-w-6xl px-4 py-6">
       <div className="mb-6 flex items-center gap-2 text-primary"><SearchIcon className="h-5 w-5" /><span className="text-xs font-semibold uppercase tracking-widest">Visual Search</span></div>
       <h1 className="font-display text-3xl font-normal tracking-tight">Find a match by photo</h1>
       <p className="mt-1 text-sm text-muted-foreground">Upload a photo and we&apos;ll find similar pieces in the catalog.</p>

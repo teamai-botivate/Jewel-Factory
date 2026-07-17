@@ -50,7 +50,7 @@ function TryOnInner() {
   }
 
   return (
-    <main className="mx-auto max-w-5xl">
+    <main className="mx-auto max-w-5xl px-4 py-6">
       <div className="mb-4 flex items-center gap-2 text-primary"><Sparkles className="h-5 w-5" /><span className="text-xs font-semibold uppercase tracking-widest">Virtual Try-On</span></div>
       <div className="grid gap-4 sm:gap-6 lg:grid-cols-[2fr_1fr]">
         <ARViewport ref={viewportRef} />

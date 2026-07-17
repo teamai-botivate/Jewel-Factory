@@ -33,9 +33,9 @@ export default function StoreManagerHome() {
   const featured = products[0];
 
   return (
-    <div className="space-y-10">
-      {/* ── LuxeMatch-style hero (full-bleed past the max-w-6xl main box) ───── */}
-      <section className="relative left-1/2 w-screen -translate-x-1/2 min-h-[calc(100svh-160px)] overflow-hidden bg-[#211711]">
+    <div className="space-y-14 pb-4">
+      {/* ── LuxeMatch-style hero ───────────────────────────────────────────── */}
+      <section className="relative w-full min-h-[calc(100svh-160px)] overflow-hidden bg-[#211711]">
         {/* Faded showroom backdrop */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
@@ -113,9 +113,9 @@ export default function StoreManagerHome() {
         </motion.aside>
       )}
 
-      {/* Quick actions (unchanged Jewel Factory look) */}
-      <section className="mx-auto w-full max-w-4xl">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {/* Quick actions */}
+      <section className="mx-auto w-full max-w-[1400px] px-6 lg:px-10">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
           <Card href="/store-manager/kiosk" icon={Gem} title="Catalog" desc="Browse with the customer & place their order." />
           <Card href="/store-manager/search" icon={Search} title="Search by Photo" desc="Find a matching design from a photo." />
           <Card href="/store-manager/try-on" icon={Sparkles} title="Virtual Try-On" desc="Let the customer try pieces on with AR." />
@@ -126,7 +126,7 @@ export default function StoreManagerHome() {
 
       {/* ── Popular now (dark section, top catalog products) ─────────────────── */}
       {products.length > 0 && (
-        <section className="relative left-1/2 w-screen -translate-x-1/2 bg-[#1b1612] py-14 text-white md:py-20">
+        <section className="w-full bg-[#1b1612] py-14 text-white md:py-20">
           <div className="mx-auto max-w-[1400px] px-6 lg:px-10">
             <div className="mb-8 flex items-end justify-between gap-6">
               <div>
@@ -143,7 +143,7 @@ export default function StoreManagerHome() {
       )}
 
       {/* ── Virtual Try-On banner ───────────────────────────────────────────── */}
-      <section className="mx-auto w-full max-w-[1400px]">
+      <section className="mx-auto w-full max-w-[1400px] px-6 lg:px-10">
         <div className="grid overflow-hidden rounded-2xl bg-[#211913] text-white md:grid-cols-[1.1fr_0.9fr]">
           <div className="px-6 py-10 md:px-10 md:py-14">
             <p className="mb-3 text-xs font-semibold uppercase tracking-[0.24em] text-[#e4cf8f]">Virtual try-on</p>
@@ -162,7 +162,7 @@ export default function StoreManagerHome() {
 
       {/* ── More to explore ─────────────────────────────────────────────────── */}
       {products.length > 4 && (
-        <section className="mx-auto w-full max-w-[1400px]">
+        <section className="mx-auto w-full max-w-[1400px] px-6 lg:px-10">
           <div className="mb-8">
             <p className="mb-2 text-xs font-semibold uppercase tracking-[0.24em] text-primary">Discover</p>
             <h2 className="font-display text-3xl font-normal md:text-5xl">More to explore</h2>
