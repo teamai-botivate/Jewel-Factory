@@ -5,6 +5,14 @@ kaha se laana hai, database kaise banana hai, aur app kaise run karna hai.
 
 Follow karo top se bottom, ek-ek step.
 
+> **Naye client ko handover** kar rahe ho? → **`HANDOVER.md`** use karo (accounts +
+> env + DB + deploy + first-login + secret-rotation, ek jagah). Database ka poora
+> naksha → **`DATABASE.md`**. System flow → **`SYSTEM_FLOW.txt`**.
+>
+> **Migrations:** `pnpm db:deploy` saari 5 migrations ek command me apply karta hai
+> (init · kiosk_pin · b2b_item_image · branch_hierarchy · order_messages) — fresh DB
+> pe kuch manual SQL nahi. `db:seed` = 1 manufacturer + 14 categories.
+
 ---
 
 ## 📋 Kya-kya chahiye (accounts)

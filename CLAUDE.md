@@ -34,6 +34,9 @@ Tailwind v4 (CSS-first, no config file) + shadcn/ui (new-york) + lucide + motion
 - **Customer PII is NOT stored and never reaches the manufacturer.** Kiosk/custom orders carry only products + qty + an editable `requirementNote`. Customer name/phone are nullable (store manager keeps them outside the system). Manufacturer sees: retailer name, branch name, requirement note, retailer HO ship-to address.
 - **The requirement note** (`requirementNote` on kiosk/B2B orders) is written by the Store Manager, **editable by Store Manager AND HO Manager** (PATCH `/store/{kiosk,b2b}-orders/:id/note`), and forwarded to the manufacturer.
 - **Restock is PIN-walled** per branch (`branches.restock_pin_hash`, cookie `jf_restock`). Set/reset by Store Manager, HO Manager, or Retailer.
+- **Store Manager "My Orders"** (`/store-manager/my-orders`) — their branch's kiosk/custom/restock orders with status (Pending→Approved→**Completed**). Store Manager sets **Completed** (`completedAt`) when the piece reaches the customer/store — a flag, separate from the approval status.
+- **Per-order chat** (`order_messages`, polymorphic by `OrderKind`+orderId) — HO Manager ↔ Store Manager, scoped by `storeId`. APIs: `/api/store/messages/:kind/:id` (HO) and `/api/branch-manager/messages/:kind/:id` (Store Manager). Shared UI `components/orders/OrderChat.tsx`.
+- **Store Manager storefront = LuxeMatch look** (rich hero + sections), header/nav/branding = Jewel Factory. Gold-only — no blue/diamond stock imagery. Don't simplify it back to a plain dashboard.
 - **Owner-approve writes `null`** to `*ApprovedById`/`reviewedById` (owner is not a `StoreManager` row — see `approverIdOrNull` in `lib/api/guards.ts`).
 - **Kiosk order items** carry `manufacturerProductId` + snapshots; `product_id` FK is for STORE products only.
 - **Branding on kiosk** — store's own logo + name; footer "Powered by AT Jewellers".
@@ -44,12 +47,15 @@ Tailwind v4 (CSS-first, no config file) + shadcn/ui (new-york) + lucide + motion
 app/
   layout.tsx, page.tsx (landing -> /portal), globals.css
   api/[[...route]]/route.ts   -> mounts lib/api/app.ts (Hono). Exports GET/POST/PATCH/PUT/DELETE.
-  portal/                     staff login selector (3 cards)
+  portal/                     staff login selector (4 cards: Retailer / HO Manager / Store Manager / Manufacturer)
   manufacturer/               login, dashboard, catalog(+new/[id]), orders(+[id]), kiosk-orders, custom-designs, stores, store-registrations
   store/                      RETAILER + HO MANAGER portal: login/register/forgot/reset, manager/login+forgot+reset, dashboard,
                               pending-approvals (branch + editable note), manufacturer-catalog, b2b-orders, kiosk-orders,
                               custom-designs, intelligence, analytics, profile, managers (HO), branches (stores + branch mgrs + PIN), settings
-  store-manager/              STORE MANAGER portal (NEW): login, dashboard, kiosk, custom-design, restock (PIN-walled), CatalogOrderPanel
+  store-manager/              STORE MANAGER storefront (login-gated, LuxeMatch-style, real catalog data):
+                              home (full-bleed hero + Popular now + Try-On banner + More to explore + rich footer),
+                              kiosk, try-on, search, custom-design (image upload), restock (PIN-walled),
+                              my-orders (kiosk/custom/restock tabs · status · Mark Completed · per-order chat), CatalogOrderPanel
   [storeSlug]/                LEGACY public kiosk: home, catalog(+[design]), search, try-on, custom-design, checkout(+success)
 components/
   ui/           shadcn (51 components)
@@ -57,6 +63,7 @@ components/
   layout/       ManufacturerLayout, StoreLayout
   manufacturer/ ProductForm (image + tryon upload)
   kiosk/        StoreContext, KioskHeader, ProductCard
+  orders/       OrderChat (per-order HO↔Store-Manager chat, reused both sides)
   ar/           ARViewport
 lib/
   prisma.ts, env.ts, auth.ts (3 HMAC cookies), password.ts (bcrypt), slug.ts,
@@ -124,18 +131,22 @@ pnpm migrate:branches               # Option-A: default "Main Store" branch per 
 
 ## Setup for a fresh DB
 
-1. `cp .env.example .env` — fill DATABASE_URL + DIRECT_URL (Supabase), secrets (min 32 chars: MANUFACTURER/STORE/MANAGER; BRANCH_MANAGER optional), Cloudinary, Qdrant, EMBEDDER_URL, SMTP.
-2. `pnpm db:migrate` (includes `20260717000000_branch_hierarchy`) then `pnpm db:seed`.
+1. `cp .env.example .env` — fill DATABASE_URL + DIRECT_URL (Supabase), secrets (min 32 chars: MANUFACTURER/STORE/MANAGER/**BRANCH_MANAGER**), Cloudinary, Qdrant, EMBEDDER_URL, SMTP. No `NEXT_PUBLIC_SUPABASE_*` — app uses Postgres directly, not Supabase Auth.
+2. `pnpm db:deploy` (runs all 5 migrations → full schema, no manual SQL) then `pnpm db:seed` (1 manufacturer + 14 categories).
 3. `pnpm dev`.
-Full step-by-step (Hinglish) in `SETUP_GUIDE.md`. Full system flow in `SYSTEM_FLOW.txt`.
+**Handover / client onboarding: `HANDOVER.md` (zero-to-live). Schema: `DATABASE.md`. Flow: `SYSTEM_FLOW.txt`. Detailed setup: `SETUP_GUIDE.md`.**
+
+## Migrations (5, all Prisma-managed, idempotent)
+`0001 jewel_factory` · `kiosk_pin` · `b2b_item_image` · `branch_hierarchy` (branches + branch_managers + branch_id/requirement_note on orders + nullable PII) · `order_messages` (order_messages table + OrderKind/MessageSender enums + completed_at on kiosk/b2b/custom). `pnpm db:deploy` applies all. `migrate:categories`/`migrate:branches` = one-off upgrades for an EXISTING DB only.
 
 ## Status
 
-**Multi-store hierarchy landed on branch `retailer-multistore`** (Retailer → HO Manager →
-Stores/branches → Store Managers). Phases: (1) schema+migration+auth, (2) Store Manager
-portal, (3) retailer branch mgmt, (4) HO approval branch+editable note + manufacturer views,
-(5) docs. `master` stays at the pre-hierarchy state; merge `retailer-multistore` when ready.
-Live DB needs the branch migration + `pnpm migrate:branches` applied.
+**Multi-store hierarchy + Store Manager storefront + per-order chat: all on branch `retailer-multistore`.**
+Retailer → HO Manager → Stores(branches) → Store Managers → Customer. Store Manager has a
+full LuxeMatch-style storefront (hero/catalog/try-on/search/custom/restock) + My Orders
+(status, Mark Completed, HO chat). HO ↔ Store Manager per-order chat both sides.
+**Live DB (Supabase) has all 5 migrations applied** (branch_hierarchy + order_messages done;
+`migrate:branches` run once). `master` stays at the pre-hierarchy state — **merge `retailer-multistore` → `master` when handing over.**
 
 ## Gotchas
 
@@ -153,3 +164,7 @@ Live DB needs the branch migration + `pnpm migrate:branches` applied.
 - **Branch tenancy:** `branchManagerGuard` sets `storeId = retailerId`, so existing retailer-scoped DB helpers work unchanged; `branchId` narrows to the shop. Kiosk/restock orders from a branch carry `branchId` + `branchNameSnapshot`.
 - **Kiosk sanitize is a DENYLIST** (`manufacturer-orders.ts sanitizeKiosk`) — it drops `customerName/Phone/Email/deliveryAddress` and lets everything else (incl. `branchNameSnapshot`, `requirementNote`) pass through. Any NEW PII field must be added to the drop-list.
 - **`CustomDesignOrder` has NO branch/requirement columns** (only the sanitized snapshot). To surface branch/note on the manufacturer's custom-design view you'd add columns there + copy them in `forwardCustomRequest`.
+- **Full-bleed sections:** the store-manager `layout` `<main>` is full-width (no `max-w`). Sections use `max-w-[1400px] mx-auto px-6`. For an edge-to-edge band use `left-1/2 w-screen -translate-x-1/2` — **NOT** `left-1/2 right-1/2 -mx-[50vw]` (that combo collapsed the hero). Non-home store-manager pages add their own `px-4 py-6` since the layout no longer pads.
+- **`order_messages` is polymorphic** (`orderKind` + `orderId`, no FK) so one table serves kiosk/b2b/custom chat. Always query it scoped by `storeId`. `OrderChat.tsx` is shared — pass `viewer` ('HO' | 'STORE_MANAGER') and the right `basePath`.
+- **`completedAt` is a flag, not a status** — set by the Store Manager via `markKiosk/B2b/CustomCompleted(branchId, id)`. Doesn't touch the approval status enum (avoids clashing with the existing flow).
+- **Store Manager storefront images must be gold** (gold-only business). Try-On banner pulls a real catalog piece, not a stock photo; hero background is a gold showroom. Don't reintroduce blue/diamond stock imagery.

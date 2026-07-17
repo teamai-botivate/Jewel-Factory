@@ -102,6 +102,30 @@
      - Contains the customer's ASK (size, engraving, timeline) — never personal data.
 
 --------------------------------------------------------------------------------
+ 4b. STORE MANAGER — "MY ORDERS" + STATUS + CHAT (after sending)
+--------------------------------------------------------------------------------
+
+  After a Store Manager sends any order (kiosk / custom / restock), they track it
+  on /store-manager/my-orders (3 tabs). Each order shows a STATUS:
+
+     Pending (HO)  -> waiting for HO Manager approval
+     Approved      -> HO approved (on its way to / with the manufacturer)
+     Completed     -> Store Manager marks this when the piece reaches the customer
+                      or the store. (Completed is a flag the Store Manager sets —
+                      not an approval state.)
+
+  PER-ORDER CHAT (HO Manager <-> Store Manager):
+     - Every order has a "Message" thread. Both sides can send messages.
+     - Store Manager: "Message HO" on My Orders — follow up as many times as needed.
+     - HO Manager: "Message" button on Pending Approvals — reply / give updates.
+     - Messages travel only between HO and the Store Manager (no customer, no
+       manufacturer). Stored in `order_messages`, scoped to the retailer.
+
+  So the loop is: Store Manager sends -> HO approves (+ can chat) -> manufacturer
+  fulfils -> piece reaches customer -> Store Manager marks Completed. HO and Store
+  Manager can message each other on the order at any point.
+
+--------------------------------------------------------------------------------
  5. SHIPPING & ADDRESSES
 --------------------------------------------------------------------------------
 
@@ -144,20 +168,27 @@
   store_managers    = HO MANAGER
   branches          = STORE      (+ fixed address, restock_pin_hash)
   branch_managers   = STORE MANAGER
-  kiosk_orders      + branch_id, branch_name_snapshot, requirement_note; customer PII now OPTIONAL
-  b2b_orders        + branch_id, branch_name_snapshot, requirement_note
-  custom_design_requests + branch_id; customer PII now OPTIONAL
+  kiosk_orders      + branch_id, branch_name_snapshot, requirement_note, completed_at; customer PII OPTIONAL
+  b2b_orders        + branch_id, branch_name_snapshot, requirement_note, completed_at
+  custom_design_requests + branch_id, completed_at; customer PII OPTIONAL
+  order_messages    = per-order chat (HO <-> Store Manager); polymorphic (order_kind + order_id)
+
+  Full schema reference: DATABASE.md
 
 --------------------------------------------------------------------------------
  9. MIGRATING AN EXISTING DEPLOYMENT (Option A — keep old data)
 --------------------------------------------------------------------------------
 
-  1. Apply migration:            prisma/migrations/20260717000000_branch_hierarchy
-     (or `prisma migrate deploy`)
+  1. Apply migrations:           pnpm db:deploy
+       -> applies branch_hierarchy + order_messages (and any earlier). All 5
+          migrations are Prisma-managed + idempotent.
   2. Back-fill branches:         pnpm migrate:branches
        -> for every existing retailer, creates a default "Main Store" branch and
           links old kiosk/B2B/custom records to it. Safe to re-run.
   3. Create real branches + store managers via /store/branches.
+
+  FRESH DB (new client): just `pnpm db:deploy` + `pnpm db:seed` — nothing manual.
+  Full client setup: HANDOVER.md.
 
 ================================================================================
  END
