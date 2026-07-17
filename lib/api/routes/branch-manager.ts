@@ -18,6 +18,7 @@ import { listActiveProducts, getActiveProductByDesignOrId } from '@/lib/db/manuf
 import { placeKioskOrder, placeB2bOrder } from '@/lib/db/orders';
 import { placeCustomRequest } from '@/lib/db/custom-design';
 import { formatStoreAddress } from '@/lib/db/stores';
+import { embedImageBase64, searchByVector } from '@/lib/search';
 import { sendData, sendError } from '../envelope';
 import { branchManagerGuard, type AppEnv } from '../guards';
 
@@ -104,6 +105,41 @@ branchManagerRoutes.get('/catalog/:id', branchManagerGuard, async (c) => {
   const product = await getActiveProductByDesignOrId(c.req.param('id'));
   if (!product) return sendError(c, 'not_found', 'Product not found', 404);
   return sendData(c, product);
+});
+
+// ── Try-on products (active, hasTryon) ────────────────────────────────────────
+branchManagerRoutes.get('/tryon-products', branchManagerGuard, async (c) => {
+  const products = await prisma.manufacturerProduct.findMany({
+    where: { status: 'ACTIVE', hasTryon: true },
+    orderBy: { createdAt: 'desc' },
+    include: {
+      images: { orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }], take: 1 },
+      tryonAssets: { where: { isActive: true } },
+    },
+  });
+  return sendData(c, products.map((p) => ({
+    id: p.id, designNumber: p.designNumber, name: p.name,
+    primaryImageUrl: p.images[0]?.secureUrl ?? null, asset: p.tryonAssets[0] ?? null,
+  })));
+});
+
+// ── Visual search (image → similar manufacturer products) ─────────────────────
+branchManagerRoutes.post('/search/image', branchManagerGuard, zValidator('json', z.object({ image: z.string().min(1) })), async (c) => {
+  let ids: string[];
+  try {
+    const vector = await embedImageBase64(c.req.valid('json').image);
+    const hits = await searchByVector(vector, 24);
+    ids = hits.map((h) => h.id);
+  } catch (err) {
+    return sendError(c, 'upstream_failed', err instanceof Error ? err.message : 'Visual search is warming up. Please try again.', 503);
+  }
+  if (ids.length === 0) return sendData(c, []);
+  const products = await prisma.manufacturerProduct.findMany({
+    where: { id: { in: ids }, status: 'ACTIVE' },
+    include: { images: { orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }], take: 1 } },
+  });
+  const byId = new Map(products.map((p) => [p.id, p]));
+  return sendData(c, ids.map((id) => byId.get(id)).filter(Boolean));
 });
 
 // ── Kiosk customer order (NO customer PII — only products + requirement note) ──
