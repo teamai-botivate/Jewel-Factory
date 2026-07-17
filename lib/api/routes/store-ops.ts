@@ -9,6 +9,7 @@ import { getIntelligenceSummary, getRecommendations } from '@/lib/db/intelligenc
 import {
   getKioskOrdersByStore, getKioskOrderForStore, approveKioskOrder, rejectKioskOrder,
   getB2bOrdersByStore, getB2bOrderForStore, approveB2bOrder, rejectB2bOrder,
+  updateKioskRequirementNote, updateB2bRequirementNote,
 } from '@/lib/db/orders';
 import {
   listCustomRequests, getCustomRequestForStore, forwardCustomRequest, rejectCustomRequest,
@@ -74,6 +75,12 @@ storeOpsRoutes.post('/kiosk-orders/:id/reject', async (c) => {
   if (!ok) return sendError(c, 'not_found', 'Order not found', 404);
   return sendData(c, { ok: true });
 });
+const NoteBody = z.object({ requirementNote: z.string().max(2000).nullish() });
+storeOpsRoutes.patch('/kiosk-orders/:id/note', zValidator('json', NoteBody), async (c) => {
+  const ok = await updateKioskRequirementNote(c.get('storeId'), c.req.param('id'), c.req.valid('json').requirementNote ?? null);
+  if (!ok) return sendError(c, 'not_found', 'Order not found', 404);
+  return sendData(c, { ok: true });
+});
 
 // ── B2B orders ────────────────────────────────────────────────────────────────
 storeOpsRoutes.get('/b2b-orders', async (c) => {
@@ -94,6 +101,11 @@ storeOpsRoutes.post('/b2b-orders/:id/approve', async (c) => {
 });
 storeOpsRoutes.post('/b2b-orders/:id/reject', async (c) => {
   const ok = await rejectB2bOrder(c.get('storeId'), c.req.param('id'));
+  if (!ok) return sendError(c, 'not_found', 'Order not found', 404);
+  return sendData(c, { ok: true });
+});
+storeOpsRoutes.patch('/b2b-orders/:id/note', zValidator('json', NoteBody), async (c) => {
+  const ok = await updateB2bRequirementNote(c.get('storeId'), c.req.param('id'), c.req.valid('json').requirementNote ?? null);
   if (!ok) return sendError(c, 'not_found', 'Order not found', 404);
   return sendData(c, { ok: true });
 });

@@ -11,7 +11,8 @@ import { useApi, apiSend } from '@/hooks/use-api';
 type Item = { id: string; productNameSnapshot: string | null; productImageSnapshot: string | null; productDesignSnapshot: string | null; quantity: number };
 type Order = {
   id: string; orderNumber: string; status: string; totalItems: number; deliveryAddress: string;
-  notes: string | null; trackingNumber: string | null; createdAt: string;
+  notes: string | null; requirementNote: string | null; branchNameSnapshot: string | null;
+  trackingNumber: string | null; createdAt: string;
   storeName: string | null; storeCity: string | null; items: Item[];
 };
 
@@ -47,14 +48,21 @@ export default function ManufacturerOrderDetailPage() {
         <div>
           <h1 className="text-xl font-semibold">{data.orderNumber}</h1>
           {data.storeName && <p className="mt-0.5 text-sm font-medium text-primary">{data.storeName}{data.storeCity ? ` · ${data.storeCity}` : ''}</p>}
+          {data.branchNameSnapshot && <p className="mt-0.5 text-xs text-muted-foreground">For store: {data.branchNameSnapshot}</p>}
           <p className="mt-0.5 text-sm text-muted-foreground">{new Date(data.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
         </div>
         <span className={`rounded-full px-3 py-1 text-sm font-medium ${STATUS[data.status] ?? ''}`}>{data.status.toLowerCase()}</span>
       </div>
 
       <div className="rounded-xl border bg-card p-4">
-        <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Delivery Address (store)</p>
+        <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Delivery Address (retailer)</p>
         <p className="text-sm">{data.deliveryAddress}</p>
+        {data.requirementNote && (
+          <div className="mt-2 rounded-md bg-muted/40 p-2">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Requirement note</p>
+            <p className="whitespace-pre-wrap text-sm">{data.requirementNote}</p>
+          </div>
+        )}
         {data.notes && <p className="mt-2 text-xs text-muted-foreground">Note: {data.notes}</p>}
         {data.trackingNumber && <p className="mt-1 text-xs font-medium text-primary">Tracking: {data.trackingNumber}</p>}
       </div>

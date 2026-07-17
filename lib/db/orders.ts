@@ -129,6 +129,14 @@ export async function rejectKioskOrder(storeId: string, id: string) {
   return true;
 }
 
+// Edit the requirement note on a kiosk order (HO manager, before/around approval).
+export async function updateKioskRequirementNote(storeId: string, id: string, note: string | null) {
+  const o = await prisma.kioskOrder.findFirst({ where: { id, storeId }, select: { id: true } });
+  if (!o) return false;
+  await prisma.kioskOrder.update({ where: { id }, data: { requirementNote: note } });
+  return true;
+}
+
 // Manufacturer view (approved only) — customer PII stripped in the route layer.
 export async function getKioskOrdersByManufacturer(manufacturerId: string) {
   return prisma.kioskOrder.findMany({
@@ -229,6 +237,14 @@ export async function rejectB2bOrder(storeId: string, id: string) {
   const o = await prisma.b2bOrder.findFirst({ where: { id, storeId }, select: { id: true } });
   if (!o) return false;
   await prisma.b2bOrder.update({ where: { id }, data: { status: 'CANCELLED', pendingManagerApproval: false } });
+  return true;
+}
+
+// Edit the requirement note on a B2B/restock order (HO manager).
+export async function updateB2bRequirementNote(storeId: string, id: string, note: string | null) {
+  const o = await prisma.b2bOrder.findFirst({ where: { id, storeId }, select: { id: true } });
+  if (!o) return false;
+  await prisma.b2bOrder.update({ where: { id }, data: { requirementNote: note } });
   return true;
 }
 

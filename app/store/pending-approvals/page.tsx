@@ -1,14 +1,14 @@
 'use client';
 
-import { CheckCircle2, XCircle, Loader2, ClipboardCheck } from 'lucide-react';
+import { CheckCircle2, XCircle, Loader2, ClipboardCheck, Store, Pencil, Save } from 'lucide-react';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
-import { useApi, apiPost } from '@/hooks/use-api';
+import { useApi, apiPost, apiSend } from '@/hooks/use-api';
 
 type Item = { id: string; productNameSnapshot: string | null; productImageSnapshot: string | null; quantity: number };
-type KioskOrder = { id: string; orderNumber: string; customerName: string; totalItems: number; pickupStore: boolean; createdAt: string; items: Item[] };
-type B2bOrder = { id: string; orderNumber: string; totalItems: number; createdAt: string; items: Item[] };
+type KioskOrder = { id: string; orderNumber: string; customerName: string | null; branchNameSnapshot: string | null; requirementNote: string | null; totalItems: number; pickupStore: boolean; createdAt: string; items: Item[] };
+type B2bOrder = { id: string; orderNumber: string; branchNameSnapshot: string | null; requirementNote: string | null; totalItems: number; createdAt: string; items: Item[] };
 
 export default function PendingApprovalsPage() {
   const kiosk = useApi<KioskOrder[]>('/api/store/kiosk-orders/pending', '/store/login');
@@ -46,8 +46,9 @@ export default function PendingApprovalsPage() {
         <section className="space-y-2">
           <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Kiosk Orders</h2>
           {kiosk.data!.map((o) => (
-            <Row key={o.id} title={o.orderNumber} sub={`${o.customerName} · ${o.totalItems} item(s) · ${o.pickupStore ? 'Pickup' : 'Delivery'}`}
-              items={o.items} busy={busy?.startsWith(o.id) ?? false}
+            <Row key={o.id} kind="kiosk" id={o.id} title={o.orderNumber} branch={o.branchNameSnapshot}
+              sub={`${o.totalItems} item(s)`} note={o.requirementNote}
+              items={o.items} busy={busy?.startsWith(o.id) ?? false} onNoteSaved={() => kiosk.reload()}
               onApprove={() => act('kiosk', o.id, 'approve')} onReject={() => act('kiosk', o.id, 'reject')} />
           ))}
         </section>
@@ -57,8 +58,9 @@ export default function PendingApprovalsPage() {
         <section className="space-y-2">
           <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">B2B Restock Orders</h2>
           {b2b.data!.map((o) => (
-            <Row key={o.id} title={o.orderNumber} sub={`${o.totalItems} item(s)`}
-              items={o.items} busy={busy?.startsWith(o.id) ?? false}
+            <Row key={o.id} kind="b2b" id={o.id} title={o.orderNumber} branch={o.branchNameSnapshot}
+              sub={`${o.totalItems} item(s)`} note={o.requirementNote}
+              items={o.items} busy={busy?.startsWith(o.id) ?? false} onNoteSaved={() => b2b.reload()}
               onApprove={() => act('b2b', o.id, 'approve')} onReject={() => act('b2b', o.id, 'reject')} />
           ))}
         </section>
@@ -67,12 +69,31 @@ export default function PendingApprovalsPage() {
   );
 }
 
-function Row({ title, sub, items, busy, onApprove, onReject }: { title: string; sub: string; items: Item[]; busy: boolean; onApprove: () => void; onReject: () => void }) {
+function Row({ kind, id, title, branch, sub, note, items, busy, onApprove, onReject, onNoteSaved }: {
+  kind: 'kiosk' | 'b2b'; id: string; title: string; branch: string | null; sub: string; note: string | null;
+  items: Item[]; busy: boolean; onApprove: () => void; onReject: () => void; onNoteSaved: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(note ?? '');
+  const [saving, setSaving] = useState(false);
+
+  async function saveNote() {
+    setSaving(true);
+    try {
+      await apiSend('PATCH', `/api/store/${kind === 'kiosk' ? 'kiosk-orders' : 'b2b-orders'}/${id}/note`, { requirementNote: draft.trim() || null });
+      setEditing(false);
+      onNoteSaved();
+    } catch { /* ignore */ } finally { setSaving(false); }
+  }
+
   return (
     <div className="rounded-xl border bg-card px-4 py-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="text-sm font-medium">{title}</p>
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-sm font-medium">{title}</p>
+            {branch && <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-800"><Store className="h-3 w-3" />{branch}</span>}
+          </div>
           <p className="text-xs text-muted-foreground">{sub}</p>
         </div>
         <div className="flex gap-2">
@@ -84,6 +105,28 @@ function Row({ title, sub, items, busy, onApprove, onReject }: { title: string; 
           </Button>
         </div>
       </div>
+
+      {/* Requirement note — editable by HO before approving */}
+      <div className="mt-3 rounded-lg border bg-muted/20 p-2.5">
+        <div className="flex items-center justify-between">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Requirement note (sent to manufacturer)</p>
+          {!editing && (
+            <button onClick={() => { setDraft(note ?? ''); setEditing(true); }} className="inline-flex items-center gap-1 text-xs text-primary hover:underline"><Pencil className="h-3 w-3" />Edit</button>
+          )}
+        </div>
+        {editing ? (
+          <div className="mt-1.5 space-y-2">
+            <textarea value={draft} onChange={(e) => setDraft(e.target.value)} className="w-full rounded-md border border-input bg-background px-2.5 py-1.5 text-sm min-h-[60px]" placeholder="Customer requirement / specs…" />
+            <div className="flex gap-2">
+              <Button size="sm" onClick={saveNote} disabled={saving} className="metal-sheen text-[#17120b] font-semibold">{saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><Save className="mr-1 h-3.5 w-3.5" />Save</>}</Button>
+              <Button size="sm" variant="outline" onClick={() => setEditing(false)}>Cancel</Button>
+            </div>
+          </div>
+        ) : (
+          <p className="mt-1 text-sm text-foreground/80">{note?.trim() ? note : <span className="text-muted-foreground italic">No note</span>}</p>
+        )}
+      </div>
+
       {items.length > 0 && (
         <div className="mt-3 flex flex-wrap gap-3 border-t pt-3">
           {items.map((it) => (

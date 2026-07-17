@@ -11,6 +11,7 @@ type Item = { id: string; productNameSnapshot: string; productImageSnapshot: str
 type Order = {
   id: string; orderNumber: string; status: string; totalItems: number;
   storeNameSnapshot: string; storeCitySnapshot: string | null;
+  branchNameSnapshot: string | null; requirementNote: string | null;
   shipToStoreAddress: string; createdAt: string; items?: Item[];
 };
 
@@ -61,7 +62,7 @@ export default function ManufacturerKioskOrdersPage() {
               <button type="button" onClick={() => toggle(o.id)} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-muted/30">
                 <div className="grid flex-1 grid-cols-2 gap-x-4 sm:grid-cols-4">
                   <div><p className="text-xs text-muted-foreground">Order</p><p className="text-sm font-medium">{o.orderNumber}</p></div>
-                  <div><p className="text-xs text-muted-foreground">Store</p><p className="text-sm font-medium text-primary truncate">{o.storeNameSnapshot}</p>{o.storeCitySnapshot && <p className="text-xs text-muted-foreground">{o.storeCitySnapshot}</p>}</div>
+                  <div><p className="text-xs text-muted-foreground">Retailer / Store</p><p className="text-sm font-medium text-primary truncate">{o.storeNameSnapshot}</p><p className="text-xs text-muted-foreground truncate">{o.branchNameSnapshot ?? o.storeCitySnapshot ?? ''}</p></div>
                   <div><p className="text-xs text-muted-foreground">Items</p><p className="text-sm tabular-nums">{o.totalItems}</p></div>
                   <div className="flex items-start"><span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS[o.status] ?? ''}`}>{o.status.toLowerCase()}</span></div>
                 </div>
@@ -69,8 +70,20 @@ export default function ManufacturerKioskOrdersPage() {
               </button>
               {expanded === o.id && (
                 <div className="border-t bg-muted/10 px-4 pb-4 pt-3 space-y-3">
+                  {(detail?.branchNameSnapshot ?? o.branchNameSnapshot) && (
+                    <div>
+                      <p className="text-xs text-muted-foreground uppercase tracking-wider">For store (branch)</p>
+                      <p className="text-sm font-medium">{detail?.branchNameSnapshot ?? o.branchNameSnapshot}</p>
+                    </div>
+                  )}
+                  {(detail?.requirementNote ?? o.requirementNote) && (
+                    <div>
+                      <p className="text-xs text-muted-foreground uppercase tracking-wider">Requirement note</p>
+                      <p className="whitespace-pre-wrap text-sm">{detail?.requirementNote ?? o.requirementNote}</p>
+                    </div>
+                  )}
                   <div>
-                    <p className="text-xs text-muted-foreground uppercase tracking-wider">Ship to (store address)</p>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider">Ship to (retailer address)</p>
                     <p className="text-sm">{o.shipToStoreAddress || '—'}</p>
                   </div>
                   {detail?.items && (
