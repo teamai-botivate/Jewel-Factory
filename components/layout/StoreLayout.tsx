@@ -2,7 +2,7 @@
 
 import {
   LayoutDashboard, Package, ShoppingBag, PencilLine, ClipboardCheck,
-  BarChart3, Lightbulb, Store as StoreIcon, UserCog, Settings, LogOut, Menu, X, Gem, Lock, Building2,
+  BarChart3, Lightbulb, Store as StoreIcon, UserCog, Settings, LogOut, Menu, X, Gem, Building2,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -18,9 +18,9 @@ const NAV = [
   { label: 'Custom Designs', href: '/store/custom-designs', icon: PencilLine },
   { label: 'Intelligence', href: '/store/intelligence', icon: Lightbulb },
   { label: 'Analytics', href: '/store/analytics', icon: BarChart3 },
-  { label: 'Kiosk PIN', href: '/store/kiosk-pin', icon: Lock }, // owner + manager
-  { label: 'Stores (Branches)', href: '/store/branches', icon: Building2, ownerOnly: true },
-  { label: 'Store Profile', href: '/store/profile', icon: StoreIcon, ownerOnly: true },
+  // Kiosk PIN removed — it is now managed per-Store on the Stores (Branches) page.
+  { label: 'Stores (Branches)', href: '/store/branches', icon: Building2 }, // owner + HO manager
+  { label: 'Retailer Profile', href: '/store/profile', icon: StoreIcon, ownerOnly: true },
   { label: 'Managers (HO)', href: '/store/managers', icon: UserCog, ownerOnly: true },
   { label: 'Settings', href: '/store/settings', icon: Settings, ownerOnly: true },
 ];

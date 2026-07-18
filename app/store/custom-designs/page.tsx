@@ -1,8 +1,9 @@
 'use client';
 
-import { CheckCircle2, XCircle, Loader2, PencilLine, ChevronDown, ChevronUp } from 'lucide-react';
+import { CheckCircle2, XCircle, Loader2, PencilLine, ChevronDown, ChevronUp, MessageSquare } from 'lucide-react';
 import { useState } from 'react';
 
+import { OrderChat } from '@/components/orders/OrderChat';
 import { Button } from '@/components/ui/button';
 import { useApi, apiPost } from '@/hooks/use-api';
 
@@ -29,6 +30,7 @@ export default function StoreCustomDesignsPage() {
   const { data, error, loading, reload } = useApi<Request[]>('/api/store/custom-designs', '/store/login');
   const [busy, setBusy] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [chat, setChat] = useState<{ id: string; label: string } | null>(null);
 
   async function act(id: string, action: 'approve' | 'reject') {
     if (action === 'reject' && !confirm('Reject this custom design request?')) return;
@@ -87,21 +89,37 @@ export default function StoreCustomDesignsPage() {
                       </div>
                     </div>
                   )}
-                  {r.status === 'PENDING' && (
-                    <div className="flex gap-2 pt-1">
-                      <Button size="sm" disabled={busy?.startsWith(r.id)} onClick={() => act(r.id, 'approve')} className="metal-sheen text-[#17120b] font-semibold">
-                        {busy === r.id + 'approve' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><CheckCircle2 className="mr-1 h-3.5 w-3.5" />Approve &amp; Forward</>}
-                      </Button>
-                      <Button size="sm" variant="outline" disabled={busy?.startsWith(r.id)} onClick={() => act(r.id, 'reject')} className="border-red-200 text-red-700 hover:bg-red-50">
-                        <XCircle className="mr-1 h-3.5 w-3.5" />Reject
-                      </Button>
-                    </div>
-                  )}
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {r.status === 'PENDING' && (
+                      <>
+                        <Button size="sm" disabled={busy?.startsWith(r.id)} onClick={() => act(r.id, 'approve')} className="metal-sheen text-[#17120b] font-semibold">
+                          {busy === r.id + 'approve' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><CheckCircle2 className="mr-1 h-3.5 w-3.5" />Approve &amp; Forward</>}
+                        </Button>
+                        <Button size="sm" variant="outline" disabled={busy?.startsWith(r.id)} onClick={() => act(r.id, 'reject')} className="border-red-200 text-red-700 hover:bg-red-50">
+                          <XCircle className="mr-1 h-3.5 w-3.5" />Reject
+                        </Button>
+                      </>
+                    )}
+                    <Button size="sm" variant="outline" onClick={() => setChat({ id: r.id, label: r.customerName })}>
+                      <MessageSquare className="mr-1 h-3.5 w-3.5" />Message Store Manager
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>
           ))}
         </div>
+      )}
+
+      {chat && (
+        <OrderChat
+          basePath="/api/store/messages"
+          kind="custom"
+          orderId={chat.id}
+          orderLabel={chat.label}
+          viewer="HO"
+          onClose={() => setChat(null)}
+        />
       )}
     </div>
   );

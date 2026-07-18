@@ -1,7 +1,8 @@
 'use client';
 
-import { Loader2, Sparkles } from 'lucide-react';
+import { ArrowLeft, Loader2, Sparkles } from 'lucide-react';
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useRef, useState } from 'react';
 
@@ -34,7 +35,10 @@ function TryOnInner() {
   const viewportRef = useRef<ARViewportHandle>(null);
   const [products, setProducts] = useState<TryonProduct[] | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
-  const wantId = useSearchParams().get('product'); // came from the kiosk detail modal's "Try On" button
+  const params = useSearchParams();
+  const wantId = params.get('product'); // came from a detail modal's "Try On" button
+  // Where to return when "Back" is clicked — the page the user came from.
+  const backHref = params.get('back') || '/store-manager/kiosk';
   const autoSelected = useRef(false);
 
   useEffect(() => {
@@ -61,6 +65,9 @@ function TryOnInner() {
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-6">
+      <Link href={backHref} className="mb-3 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+        <ArrowLeft className="h-4 w-4" /> Back
+      </Link>
       <div className="mb-4 flex items-center gap-2 text-primary"><Sparkles className="h-5 w-5" /><span className="text-xs font-semibold uppercase tracking-widest">Virtual Try-On</span></div>
       <div className="grid gap-4 sm:gap-6 lg:grid-cols-[2fr_1fr]">
         <ARViewport ref={viewportRef} />

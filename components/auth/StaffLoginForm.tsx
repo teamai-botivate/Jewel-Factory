@@ -53,10 +53,12 @@ export function StaffLoginForm({
             ? json.error.message
             : 'Invalid email or password',
         );
+        setLoading(false); // reset so the user can correct credentials and retry
         return;
       }
       // Full-page navigation (not router.push) so the just-set auth cookie is
-      // committed and sent on the dashboard's first API call.
+      // committed and sent on the dashboard's first API call. Keep loading true
+      // through the redirect.
       window.location.assign(redirectTo);
     } catch {
       setError('Network error. Please try again.');

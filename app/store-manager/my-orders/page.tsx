@@ -135,10 +135,11 @@ function CustomList() {
   return (
     <div className="space-y-3">
       {data.map((r) => {
+        // Store Manager does NOT see the manufacturer's granular status — that is HO-only.
         const st = r.completedAt ? { label: 'Completed', cls: 'bg-green-100 text-green-800' }
           : r.status === 'PENDING' ? { label: 'Pending (HO)', cls: 'bg-yellow-100 text-yellow-800' }
           : r.status === 'REJECTED' ? { label: 'Rejected', cls: 'bg-red-100 text-red-700' }
-          : { label: r.order?.status ? `HO · ${r.order.status.toLowerCase()}` : 'Approved', cls: 'bg-blue-100 text-blue-800' };
+          : { label: 'Approved by HO', cls: 'bg-blue-100 text-blue-800' };
         return (
           <div key={r.id} className="rounded-xl border bg-card p-4">
             <div className="flex items-start justify-between gap-3">

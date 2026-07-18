@@ -41,6 +41,7 @@ export function CatalogOrderPanel({
   const [placing, setPlacing] = useState(false);
   const [detail, setDetail] = useState<Product | null>(null);
   const [detailImg, setDetailImg] = useState(0);
+  const [zoom, setZoom] = useState<string | null>(null); // click product image to enlarge
   const [placeError, setPlaceError] = useState<string | null>(null);
 
   const filtered = (data ?? []).filter((p) =>
@@ -197,7 +198,7 @@ export function CatalogOrderPanel({
                 <div className="aspect-square overflow-hidden rounded-xl bg-white">
                   {detail.images[detailImg] ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={detail.images[detailImg].secureUrl} alt={detail.name} className="h-full w-full object-contain" />
+                    <img src={detail.images[detailImg].secureUrl} alt={detail.name} onClick={() => setZoom(detail.images[detailImg].secureUrl)} className="h-full w-full cursor-zoom-in object-contain" title="Click to enlarge" />
                   ) : <div className="flex h-full items-center justify-center text-muted-foreground/40"><Gem className="h-10 w-10" /></div>}
                 </div>
                 {detail.images.length > 1 && (
@@ -231,7 +232,7 @@ export function CatalogOrderPanel({
                   <Button onClick={() => { add(detail); setDetail(null); }} className="metal-sheen flex-1 text-[#17120b] font-semibold"><Plus className="mr-1.5 h-4 w-4" />Add to order</Button>
                   {detail.hasTryon && (
                     <Button asChild variant="outline" className="border-primary/40 text-primary">
-                      <Link href={`/store-manager/try-on?product=${detail.id}`}><Sparkles className="mr-1.5 h-4 w-4" />Try On</Link>
+                      <Link href={`/store-manager/try-on?product=${detail.id}&back=/store-manager/kiosk`}><Sparkles className="mr-1.5 h-4 w-4" />Try On</Link>
                     </Button>
                   )}
                 </div>
@@ -265,6 +266,15 @@ export function CatalogOrderPanel({
         </div>
         );
       })()}
+
+      {/* Full-screen image zoom */}
+      {zoom && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-6" onClick={() => setZoom(null)} role="dialog" aria-modal="true">
+          <button type="button" onClick={() => setZoom(null)} aria-label="Close" className="absolute right-4 top-4 rounded-full bg-white/15 p-2 text-white hover:bg-white/25"><X className="h-5 w-5" /></button>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={zoom} alt="preview" onClick={(e) => e.stopPropagation()} className="max-h-[85vh] max-w-[85vw] rounded-lg object-contain" />
+        </div>
+      )}
     </div>
   );
 }
