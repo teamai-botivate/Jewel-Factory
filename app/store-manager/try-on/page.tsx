@@ -2,6 +2,7 @@
 
 import { Loader2, Sparkles } from 'lucide-react';
 import dynamic from 'next/dynamic';
+import { useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useRef, useState } from 'react';
 
 import type { ARViewportHandle } from '@/components/ar/ARViewport';
@@ -33,6 +34,8 @@ function TryOnInner() {
   const viewportRef = useRef<ARViewportHandle>(null);
   const [products, setProducts] = useState<TryonProduct[] | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const wantId = useSearchParams().get('product'); // came from the kiosk detail modal's "Try On" button
+  const autoSelected = useRef(false);
 
   useEffect(() => {
     (async () => {
@@ -42,6 +45,13 @@ function TryOnInner() {
       setProducts((json.data ?? []).filter((p) => p.asset));
     })();
   }, []);
+
+  // Auto-select the product passed via ?product=<id> once the list has loaded.
+  useEffect(() => {
+    if (autoSelected.current || !wantId || !products) return;
+    const match = products.find((p) => p.id === wantId);
+    if (match) { autoSelected.current = true; void select(match); }
+  }, [wantId, products]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function select(p: TryonProduct) {
     if (!p.asset) return;
