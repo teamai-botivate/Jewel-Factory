@@ -1,10 +1,12 @@
 'use client';
 
 import { Loader2, PencilLine, ChevronDown, ChevronUp } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
+import { OrderFilters } from '@/components/orders/OrderFilters';
 import { Button } from '@/components/ui/button';
 import { useApi, apiSend } from '@/hooks/use-api';
+import { CUSTOM_ORDER_STATUS_OPTIONS, matchOrder, uniqueBranchOptions } from '@/lib/order-filters';
 
 type Order = {
   id: string; orderNumber: string; storeNameSnapshot: string; storeAddressSnapshot: string;
@@ -24,6 +26,15 @@ export default function ManufacturerCustomDesignsPage() {
   const { data, error, loading, reload } = useApi<Order[]>('/api/manufacturer/custom-designs', '/manufacturer/login');
   const [expanded, setExpanded] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [status, setStatus] = useState('');
+  const [retailer, setRetailer] = useState('');
+
+  const retailerOptions = useMemo(() => uniqueBranchOptions((data ?? []).map((o) => o.storeNameSnapshot)), [data]);
+  const filtered = useMemo(
+    () => (data ?? []).filter((o) => matchOrder(o, { search, status, searchLabel: o.category, branch: retailer, branchName: o.storeNameSnapshot })),
+    [data, search, status, retailer],
+  );
 
   async function advance(id: string, status: string) {
     setBusy(id);
@@ -37,6 +48,13 @@ export default function ManufacturerCustomDesignsPage() {
         <h1 className="text-2xl font-medium tracking-tight">Custom Design Orders</h1>
         <p className="mt-0.5 text-sm text-muted-foreground">Sanitized from stores — no customer data. Ship to the store address.</p>
       </div>
+      {data && data.length > 0 && (
+        <OrderFilters
+          search={search} onSearch={setSearch} searchPlaceholder="Search by order ID / category…"
+          status={status} onStatus={setStatus} statusOptions={CUSTOM_ORDER_STATUS_OPTIONS}
+          group={retailer} onGroup={setRetailer} groupOptions={retailerOptions} groupAllLabel="All retailers" groupLabel="Retailer"
+        />
+      )}
       {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
       {loading && <div className="flex items-center gap-2 py-12 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>}
       {data && data.length === 0 && (
@@ -44,9 +62,12 @@ export default function ManufacturerCustomDesignsPage() {
           <PencilLine className="h-10 w-10 text-muted-foreground/40" /><p className="text-sm text-muted-foreground">No custom design orders yet.</p>
         </div>
       )}
-      {data && data.length > 0 && (
+      {data && data.length > 0 && filtered.length === 0 && (
+        <p className="py-12 text-center text-sm text-muted-foreground">No orders match your filters.</p>
+      )}
+      {filtered.length > 0 && (
         <div className="space-y-3">
-          {data.map((o) => (
+          {filtered.map((o) => (
             <div key={o.id} className="rounded-xl border bg-card overflow-hidden">
               <button type="button" onClick={() => setExpanded(expanded === o.id ? null : o.id)} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-muted/30">
                 <div className="grid flex-1 grid-cols-2 gap-x-4 sm:grid-cols-4">

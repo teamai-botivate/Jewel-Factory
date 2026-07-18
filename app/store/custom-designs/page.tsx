@@ -1,17 +1,20 @@
 'use client';
 
 import { CheckCircle2, XCircle, Loader2, PencilLine, ChevronDown, ChevronUp, MessageSquare } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { OrderChat } from '@/components/orders/OrderChat';
+import { OrderFilters } from '@/components/orders/OrderFilters';
 import { Button } from '@/components/ui/button';
 import { useApi, apiPost } from '@/hooks/use-api';
+import { CUSTOM_REQUEST_STATUS_OPTIONS, matchOrder, uniqueBranchOptions } from '@/lib/order-filters';
 
 type Order = { id: string; status: string; orderNumber: string; trackingNumber: string | null };
 type Request = {
   id: string; customerName: string; customerPhone: string; category: string;
   weightGrams: string | null; purity: string | null; designNotes: string | null;
   referenceImageUrl: string | null; status: string; createdAt: string; order: Order | null;
+  branch: { name: string } | null;
 };
 
 const REQ_STATUS: Record<string, string> = {
@@ -31,6 +34,18 @@ export default function StoreCustomDesignsPage() {
   const [busy, setBusy] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [chat, setChat] = useState<{ id: string; label: string } | null>(null);
+  const [search, setSearch] = useState('');
+  const [status, setStatus] = useState('');
+  const [branch, setBranch] = useState('');
+
+  const branchOptions = useMemo(() => uniqueBranchOptions((data ?? []).map((r) => r.branch?.name)), [data]);
+  const filtered = useMemo(
+    () => (data ?? []).filter((r) => matchOrder(
+      { orderNumber: r.order?.orderNumber, status: r.status },
+      { search, status, searchLabel: `${r.customerName} ${r.customerPhone}`, branch, branchName: r.branch?.name },
+    )),
+    [data, search, status, branch],
+  );
 
   async function act(id: string, action: 'approve' | 'reject') {
     if (action === 'reject' && !confirm('Reject this custom design request?')) return;
@@ -49,6 +64,13 @@ export default function StoreCustomDesignsPage() {
         <h1 className="text-2xl font-medium tracking-tight">Custom Design Requests</h1>
         <p className="mt-0.5 text-sm text-muted-foreground">Approve to forward specs to the manufacturer (no customer data sent).</p>
       </div>
+      {data && data.length > 0 && (
+        <OrderFilters
+          search={search} onSearch={setSearch} searchPlaceholder="Search by name / order ID…"
+          status={status} onStatus={setStatus} statusOptions={CUSTOM_REQUEST_STATUS_OPTIONS}
+          group={branch} onGroup={setBranch} groupOptions={branchOptions} groupAllLabel="All stores" groupLabel="Store"
+        />
+      )}
       {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
       {loading && <div className="flex items-center gap-2 py-12 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>}
       {data && data.length === 0 && (
@@ -56,14 +78,18 @@ export default function StoreCustomDesignsPage() {
           <PencilLine className="h-10 w-10 text-muted-foreground/40" /><p className="text-sm text-muted-foreground">No custom design requests yet.</p>
         </div>
       )}
-      {data && data.length > 0 && (
+      {data && data.length > 0 && filtered.length === 0 && (
+        <p className="py-12 text-center text-sm text-muted-foreground">No requests match your filters.</p>
+      )}
+      {filtered.length > 0 && (
         <div className="space-y-3">
-          {data.map((r) => (
+          {filtered.map((r) => (
             <div key={r.id} className="rounded-xl border bg-card overflow-hidden">
               <button type="button" onClick={() => setExpanded(expanded === r.id ? null : r.id)} className="flex w-full items-start justify-between gap-3 px-4 py-3 text-left hover:bg-muted/30">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="text-sm font-semibold">{r.customerName}</p>
+                    {r.branch?.name && <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">{r.branch.name}</span>}
                     <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${REQ_STATUS[r.status] ?? ''}`}>{r.status.toLowerCase()}</span>
                   </div>
                   <p className="text-xs text-muted-foreground">{r.customerPhone} · {r.category}{r.weightGrams ? ` · ${r.weightGrams}g` : ''}{r.purity ? ` · ${r.purity}` : ''}</p>

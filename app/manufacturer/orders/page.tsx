@@ -2,8 +2,11 @@
 
 import { Loader2, ShoppingBag, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
+import { useMemo, useState } from 'react';
 
+import { OrderFilters } from '@/components/orders/OrderFilters';
 import { useApi } from '@/hooks/use-api';
+import { KIOSK_B2B_STATUS_OPTIONS, matchOrder, uniqueBranchOptions } from '@/lib/order-filters';
 
 type Order = { id: string; orderNumber: string; status: string; totalItems: number; createdAt: string; storeName: string | null; storeCity: string | null };
 
@@ -15,12 +18,29 @@ const STATUS: Record<string, string> = {
 
 export default function ManufacturerOrdersPage() {
   const { data, error, loading } = useApi<Order[]>('/api/manufacturer/orders', '/manufacturer/login');
+  const [search, setSearch] = useState('');
+  const [status, setStatus] = useState('');
+  const [retailer, setRetailer] = useState('');
+
+  const retailerOptions = useMemo(() => uniqueBranchOptions((data ?? []).map((o) => o.storeName)), [data]);
+  const filtered = useMemo(
+    () => (data ?? []).filter((o) => matchOrder(o, { search, status, branch: retailer, branchName: o.storeName })),
+    [data, search, status, retailer],
+  );
+
   return (
     <div className="mx-auto w-full max-w-5xl space-y-4">
       <div>
         <h1 className="text-2xl font-medium tracking-tight">B2B Orders</h1>
         <p className="mt-0.5 text-sm text-muted-foreground">Restock orders placed by stores from your catalog.</p>
       </div>
+      {data && data.length > 0 && (
+        <OrderFilters
+          search={search} onSearch={setSearch}
+          status={status} onStatus={setStatus} statusOptions={KIOSK_B2B_STATUS_OPTIONS}
+          group={retailer} onGroup={setRetailer} groupOptions={retailerOptions} groupAllLabel="All retailers" groupLabel="Retailer"
+        />
+      )}
       {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
       {loading && <div className="flex items-center gap-2 py-12 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>}
       {data && data.length === 0 && (
@@ -28,9 +48,12 @@ export default function ManufacturerOrdersPage() {
           <ShoppingBag className="h-10 w-10 text-muted-foreground/40" /><p className="text-sm text-muted-foreground">No orders yet.</p>
         </div>
       )}
-      {data && data.length > 0 && (
+      {data && data.length > 0 && filtered.length === 0 && (
+        <p className="py-12 text-center text-sm text-muted-foreground">No orders match your filters.</p>
+      )}
+      {filtered.length > 0 && (
         <div className="rounded-xl border bg-card overflow-hidden divide-y">
-          {data.map((o) => (
+          {filtered.map((o) => (
             <Link key={o.id} href={`/manufacturer/orders/${o.id}`}>
               <div className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-muted/30">
                 <div className="grid flex-1 grid-cols-2 gap-x-4 sm:grid-cols-4">

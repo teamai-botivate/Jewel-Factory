@@ -2,14 +2,17 @@
 
 import { Loader2, Package, Plus, ChevronDown, ChevronUp } from 'lucide-react';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
+import { OrderFilters } from '@/components/orders/OrderFilters';
 import { Button } from '@/components/ui/button';
 import { useApi } from '@/hooks/use-api';
+import { KIOSK_B2B_STATUS_OPTIONS, matchOrder, uniqueBranchOptions } from '@/lib/order-filters';
 
 type Item = { id: string; productNameSnapshot: string | null; productImageSnapshot: string | null; productDesignSnapshot: string | null; quantity: number };
 type Order = {
   id: string; orderNumber: string; status: string; totalItems: number;
+  branchNameSnapshot: string | null;
   pendingManagerApproval: boolean; trackingNumber: string | null; createdAt: string; items: Item[];
 };
 
@@ -22,6 +25,15 @@ const STATUS: Record<string, string> = {
 export default function StoreB2bOrdersPage() {
   const { data, error, loading } = useApi<Order[]>('/api/store/b2b-orders', '/store/login');
   const [open, setOpen] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [status, setStatus] = useState('');
+  const [branch, setBranch] = useState('');
+
+  const branchOptions = useMemo(() => uniqueBranchOptions((data ?? []).map((o) => o.branchNameSnapshot)), [data]);
+  const filtered = useMemo(
+    () => (data ?? []).filter((o) => matchOrder(o, { search, status, branch, branchName: o.branchNameSnapshot })),
+    [data, search, status, branch],
+  );
 
   return (
     <div className="mx-auto w-full max-w-4xl space-y-4">
@@ -32,6 +44,13 @@ export default function StoreB2bOrdersPage() {
         </div>
         <Link href="/store/manufacturer-catalog"><Button className="metal-sheen text-[#17120b] font-semibold"><Plus className="mr-1.5 h-4 w-4" />New Order</Button></Link>
       </div>
+      {data && data.length > 0 && (
+        <OrderFilters
+          search={search} onSearch={setSearch}
+          status={status} onStatus={setStatus} statusOptions={KIOSK_B2B_STATUS_OPTIONS}
+          group={branch} onGroup={setBranch} groupOptions={branchOptions} groupAllLabel="All stores" groupLabel="Store"
+        />
+      )}
       {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
       {loading && <div className="flex items-center gap-2 py-12 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>}
       {data && data.length === 0 && (
@@ -39,13 +58,16 @@ export default function StoreB2bOrdersPage() {
           <Package className="h-10 w-10 text-muted-foreground/40" /><p className="text-sm text-muted-foreground">No B2B orders yet.</p>
         </div>
       )}
-      {data && data.length > 0 && (
+      {data && data.length > 0 && filtered.length === 0 && (
+        <p className="py-12 text-center text-sm text-muted-foreground">No orders match your filters.</p>
+      )}
+      {filtered.length > 0 && (
         <div className="space-y-3">
-          {data.map((o) => (
+          {filtered.map((o) => (
             <div key={o.id} className="rounded-xl border bg-card overflow-hidden">
               <button type="button" onClick={() => setOpen(open === o.id ? null : o.id)} className="flex w-full flex-wrap items-center justify-between gap-3 px-4 py-3 text-left hover:bg-muted/30">
                 <div className="min-w-0">
-                  <p className="text-sm font-medium">{o.orderNumber}</p>
+                  <p className="text-sm font-medium">{o.orderNumber}{o.branchNameSnapshot ? <span className="ml-2 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">{o.branchNameSnapshot}</span> : null}</p>
                   <p className="text-xs text-muted-foreground">{o.totalItems} item(s){o.trackingNumber ? ` · Tracking: ${o.trackingNumber}` : ''}</p>
                 </div>
                 <div className="flex items-center gap-2">

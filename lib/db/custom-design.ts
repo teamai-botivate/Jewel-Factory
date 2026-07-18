@@ -48,12 +48,14 @@ export async function placeCustomRequest(input: {
 // ── Store/manager: list + approve (forward) / reject ──────────────────────────
 
 export async function listCustomRequests(storeId: string) {
-  // Include the downstream order so the manager sees the manufacturer's live status.
+  // Include the downstream order so the manager sees the manufacturer's live status,
+  // and the branch (Store) so HO can see/filter which Store each request came from.
   return prisma.customDesignRequest.findMany({
     where: { storeId },
     orderBy: { createdAt: 'desc' },
     include: {
       order: { select: { id: true, status: true, orderNumber: true, trackingNumber: true } },
+      branch: { select: { name: true } },
     },
   });
 }

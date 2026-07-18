@@ -1,10 +1,12 @@
 'use client';
 
 import { Loader2, Users, ChevronDown, ChevronUp } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
+import { OrderFilters } from '@/components/orders/OrderFilters';
 import { Button } from '@/components/ui/button';
 import { useApi, apiSend } from '@/hooks/use-api';
+import { KIOSK_B2B_STATUS_OPTIONS, matchOrder, uniqueBranchOptions } from '@/lib/order-filters';
 
 // Manufacturer view: NO customer PII, NO amount. Ships to store address.
 type Item = { id: string; productNameSnapshot: string; productImageSnapshot: string | null; categorySnapshot: string | null; quantity: number };
@@ -27,6 +29,15 @@ export default function ManufacturerKioskOrdersPage() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [detail, setDetail] = useState<Order | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [status, setStatus] = useState('');
+  const [retailer, setRetailer] = useState('');
+
+  const retailerOptions = useMemo(() => uniqueBranchOptions((data ?? []).map((o) => o.storeNameSnapshot)), [data]);
+  const filtered = useMemo(
+    () => (data ?? []).filter((o) => matchOrder(o, { search, status, branch: retailer, branchName: o.storeNameSnapshot })),
+    [data, search, status, retailer],
+  );
 
   async function toggle(id: string) {
     if (expanded === id) { setExpanded(null); setDetail(null); return; }
@@ -48,6 +59,13 @@ export default function ManufacturerKioskOrdersPage() {
         <h1 className="text-2xl font-medium tracking-tight">Kiosk Orders</h1>
         <p className="mt-0.5 text-sm text-muted-foreground">Guest orders from store kiosks. Ship to the store address shown.</p>
       </div>
+      {data && data.length > 0 && (
+        <OrderFilters
+          search={search} onSearch={setSearch}
+          status={status} onStatus={setStatus} statusOptions={KIOSK_B2B_STATUS_OPTIONS}
+          group={retailer} onGroup={setRetailer} groupOptions={retailerOptions} groupAllLabel="All retailers" groupLabel="Retailer"
+        />
+      )}
       {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
       {loading && <div className="flex items-center gap-2 py-12 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>}
       {data && data.length === 0 && (
@@ -55,9 +73,12 @@ export default function ManufacturerKioskOrdersPage() {
           <Users className="h-10 w-10 text-muted-foreground/40" /><p className="text-sm text-muted-foreground">No kiosk orders yet.</p>
         </div>
       )}
-      {data && data.length > 0 && (
+      {data && data.length > 0 && filtered.length === 0 && (
+        <p className="py-12 text-center text-sm text-muted-foreground">No orders match your filters.</p>
+      )}
+      {filtered.length > 0 && (
         <div className="rounded-xl border bg-card overflow-hidden divide-y">
-          {data.map((o) => (
+          {filtered.map((o) => (
             <div key={o.id}>
               <button type="button" onClick={() => toggle(o.id)} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-muted/30">
                 <div className="grid flex-1 grid-cols-2 gap-x-4 sm:grid-cols-4">

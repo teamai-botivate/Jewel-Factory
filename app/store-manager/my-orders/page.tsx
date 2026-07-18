@@ -1,12 +1,14 @@
 'use client';
 
 import { Loader2, Package, ChevronDown, ChevronUp, CheckCircle2, MessageCircle, Check } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
+import { OrderChat } from '@/components/orders/OrderChat';
+import { OrderFilters } from '@/components/orders/OrderFilters';
 import { Button } from '@/components/ui/button';
 import { useApi, apiPost } from '@/hooks/use-api';
-import { OrderChat } from '@/components/orders/OrderChat';
 import { titleCaseName } from '@/lib/format';
+import { SM_STATUS_OPTIONS } from '@/lib/order-filters';
 
 type Item = { id: string; productNameSnapshot: string | null; productImageSnapshot: string | null; quantity: number };
 type BaseOrder = {
@@ -52,11 +54,34 @@ function statusOf(o: BaseOrder): { label: string; cls: string } {
   return { label: 'Approved', cls: 'bg-blue-100 text-blue-800' };
 }
 
+// Derived filter bucket for kiosk/b2b orders (no raw enum shown to the Store Manager).
+function bucketOf(o: BaseOrder): 'COMPLETED' | 'PENDING' | 'APPROVED' {
+  if (o.completedAt) return 'COMPLETED';
+  if (o.pendingStoreApproval || o.pendingManagerApproval) return 'PENDING';
+  return 'APPROVED';
+}
+
+// Derived filter bucket for custom requests.
+function customBucketOf(r: CustomOrder): 'COMPLETED' | 'PENDING' | 'REJECTED' | 'APPROVED' {
+  if (r.completedAt) return 'COMPLETED';
+  if (r.status === 'PENDING') return 'PENDING';
+  if (r.status === 'REJECTED') return 'REJECTED';
+  return 'APPROVED';
+}
+
 function OrderList({ kind, endpoint }: { kind: Kind; endpoint: string }) {
   const { data, loading, error, reload } = useApi<BaseOrder[]>(endpoint, '/store-manager/login');
   const [open, setOpen] = useState<string | null>(null);
   const [chat, setChat] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [status, setStatus] = useState('');
+
+  const filtered = useMemo(() => (data ?? []).filter((o) => {
+    if (search.trim() && !o.orderNumber.toLowerCase().includes(search.trim().toLowerCase())) return false;
+    if (status && bucketOf(o) !== status) return false;
+    return true;
+  }), [data, search, status]);
 
   async function complete(id: string) {
     setBusy(id);
@@ -70,7 +95,9 @@ function OrderList({ kind, endpoint }: { kind: Kind; endpoint: string }) {
 
   return (
     <div className="space-y-3">
-      {data.map((o) => {
+      <OrderFilters search={search} onSearch={setSearch} status={status} onStatus={setStatus} statusOptions={SM_STATUS_OPTIONS} />
+      {filtered.length === 0 && <p className="py-8 text-center text-sm text-muted-foreground">No orders match your filters.</p>}
+      {filtered.map((o) => {
         const st = statusOf(o);
         return (
           <div key={o.id} className="rounded-xl border bg-card overflow-hidden">
@@ -121,6 +148,17 @@ function CustomList() {
   const { data, loading, error, reload } = useApi<CustomOrder[]>('/api/branch-manager/my-orders/custom', '/store-manager/login');
   const [chat, setChat] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [status, setStatus] = useState('');
+
+  const filtered = useMemo(() => (data ?? []).filter((r) => {
+    if (search.trim()) {
+      const hay = `${r.order?.orderNumber ?? ''} ${r.category}`.toLowerCase();
+      if (!hay.includes(search.trim().toLowerCase())) return false;
+    }
+    if (status && customBucketOf(r) !== status) return false;
+    return true;
+  }), [data, search, status]);
 
   async function complete(id: string) {
     setBusy(id);
@@ -134,7 +172,9 @@ function CustomList() {
 
   return (
     <div className="space-y-3">
-      {data.map((r) => {
+      <OrderFilters search={search} onSearch={setSearch} searchPlaceholder="Search by order ID / category…" status={status} onStatus={setStatus} statusOptions={SM_STATUS_OPTIONS} />
+      {filtered.length === 0 && <p className="py-8 text-center text-sm text-muted-foreground">No requests match your filters.</p>}
+      {filtered.map((r) => {
         // Store Manager does NOT see the manufacturer's granular status — that is HO-only.
         const st = r.completedAt ? { label: 'Completed', cls: 'bg-green-100 text-green-800' }
           : r.status === 'PENDING' ? { label: 'Pending (HO)', cls: 'bg-yellow-100 text-yellow-800' }
