@@ -53,15 +53,26 @@ export function uniqueBranchOptions(names: (string | null | undefined)[]): { val
     .map((v) => ({ value: v, label: v }));
 }
 
+/** True if `createdAt` falls within the [from, to] date window (inclusive). */
+export function inDateRange(createdAt: string | null | undefined, from: string, to: string): boolean {
+  if (!from && !to) return true;
+  if (!createdAt) return false;
+  const day = createdAt.slice(0, 10); // 'YYYY-MM-DD' — compares lexicographically
+  if (from && day < from) return false;
+  if (to && day > to) return false;
+  return true;
+}
+
 /**
  * Generic matcher for a list row.
  * - search: substring match against the order number / label
  * - status: exact match against the row status (skip when '')
  * - branch/retailer: exact match against the row's group name (skip when '')
+ * - from/to: inclusive createdAt date window (skip when both '')
  */
 export function matchOrder(
-  row: { orderNumber?: string | null; status?: string | null },
-  opts: { search: string; status: string; searchLabel?: string; branch?: string; branchName?: string | null },
+  row: { orderNumber?: string | null; status?: string | null; createdAt?: string | null },
+  opts: { search: string; status: string; searchLabel?: string; branch?: string; branchName?: string | null; from?: string; to?: string },
 ): boolean {
   const q = opts.search.trim().toLowerCase();
   if (q) {
@@ -70,5 +81,6 @@ export function matchOrder(
   }
   if (opts.status && (row.status ?? '') !== opts.status) return false;
   if (opts.branch && (opts.branchName ?? '') !== opts.branch) return false;
+  if (!inDateRange(row.createdAt, opts.from ?? '', opts.to ?? '')) return false;
   return true;
 }

@@ -127,11 +127,12 @@
   HO Custom Designs page.
 
   SEARCH + FILTERS (all order lists — client-side):
-     - Store Manager My Orders: search by order ID; filter by status bucket.
+     - Store Manager My Orders: search by order ID; filter by status bucket; From/To date.
      - HO Manager (Kiosk / Custom / Restock): search by order ID; filter by
-       status; filter by STORE (branch) — each row shows a branch badge.
+       status; filter by STORE (branch) — each row shows a branch badge; From/To date.
      - Manufacturer (Kiosk / Custom / B2B Orders): search by order ID; filter by
-       status; filter by RETAILER (store).
+       status; filter by RETAILER (store); From/To date.
+     - Date range filters on the order's created date (createdAt), inclusive.
      - HO order detail shows which Branch it came from; Manufacturer order detail
        shows which Retailer it came from.
 

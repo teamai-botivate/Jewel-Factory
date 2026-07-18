@@ -28,11 +28,13 @@ export default function StoreB2bOrdersPage() {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
   const [branch, setBranch] = useState('');
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
 
   const branchOptions = useMemo(() => uniqueBranchOptions((data ?? []).map((o) => o.branchNameSnapshot)), [data]);
   const filtered = useMemo(
-    () => (data ?? []).filter((o) => matchOrder(o, { search, status, branch, branchName: o.branchNameSnapshot })),
-    [data, search, status, branch],
+    () => (data ?? []).filter((o) => matchOrder(o, { search, status, branch, branchName: o.branchNameSnapshot, from, to })),
+    [data, search, status, branch, from, to],
   );
 
   return (
@@ -49,6 +51,7 @@ export default function StoreB2bOrdersPage() {
           search={search} onSearch={setSearch}
           status={status} onStatus={setStatus} statusOptions={KIOSK_B2B_STATUS_OPTIONS}
           group={branch} onGroup={setBranch} groupOptions={branchOptions} groupAllLabel="All stores" groupLabel="Store"
+          from={from} to={to} onFrom={setFrom} onTo={setTo}
         />
       )}
       {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}

@@ -37,14 +37,16 @@ export default function StoreCustomDesignsPage() {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
   const [branch, setBranch] = useState('');
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
 
   const branchOptions = useMemo(() => uniqueBranchOptions((data ?? []).map((r) => r.branch?.name)), [data]);
   const filtered = useMemo(
     () => (data ?? []).filter((r) => matchOrder(
-      { orderNumber: r.order?.orderNumber, status: r.status },
-      { search, status, searchLabel: `${r.customerName} ${r.customerPhone}`, branch, branchName: r.branch?.name },
+      { orderNumber: r.order?.orderNumber, status: r.status, createdAt: r.createdAt },
+      { search, status, searchLabel: `${r.customerName} ${r.customerPhone}`, branch, branchName: r.branch?.name, from, to },
     )),
-    [data, search, status, branch],
+    [data, search, status, branch, from, to],
   );
 
   async function act(id: string, action: 'approve' | 'reject') {
@@ -69,6 +71,7 @@ export default function StoreCustomDesignsPage() {
           search={search} onSearch={setSearch} searchPlaceholder="Search by name / order ID…"
           status={status} onStatus={setStatus} statusOptions={CUSTOM_REQUEST_STATUS_OPTIONS}
           group={branch} onGroup={setBranch} groupOptions={branchOptions} groupAllLabel="All stores" groupLabel="Store"
+          from={from} to={to} onFrom={setFrom} onTo={setTo}
         />
       )}
       {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}

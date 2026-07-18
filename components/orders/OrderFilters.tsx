@@ -26,6 +26,10 @@ export function OrderFilters({
   groupOptions,
   groupAllLabel = 'All',
   groupLabel = 'Filter',
+  from,
+  to,
+  onFrom,
+  onTo,
 }: {
   search: string;
   onSearch: (v: string) => void;
@@ -39,9 +43,15 @@ export function OrderFilters({
   groupOptions?: { value: string; label: string }[];
   groupAllLabel?: string;
   groupLabel?: string;
+  // Date range (createdAt). Pass all four to show the From/To inputs.
+  from?: string;
+  to?: string;
+  onFrom?: (v: string) => void;
+  onTo?: (v: string) => void;
 }) {
   const selectCls =
     'h-9 rounded-md border border-input bg-transparent px-3 text-sm';
+  const showDates = onFrom && onTo;
   return (
     <div className="flex flex-wrap items-center gap-2">
       <div className="relative min-w-[180px] flex-1 sm:max-w-xs">
@@ -68,6 +78,18 @@ export function OrderFilters({
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
         </select>
+      )}
+
+      {showDates && (
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <span>From</span>
+          <input type="date" value={from ?? ''} onChange={(e) => onFrom!(e.target.value)} max={to || undefined} className={selectCls} aria-label="From date" />
+          <span>To</span>
+          <input type="date" value={to ?? ''} onChange={(e) => onTo!(e.target.value)} min={from || undefined} className={selectCls} aria-label="To date" />
+          {(from || to) && (
+            <button type="button" onClick={() => { onFrom!(''); onTo!(''); }} className="rounded px-1.5 py-1 text-muted-foreground hover:text-foreground" aria-label="Clear dates">Clear</button>
+          )}
+        </div>
       )}
     </div>
   );

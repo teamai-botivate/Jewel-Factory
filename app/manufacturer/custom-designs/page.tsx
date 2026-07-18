@@ -29,11 +29,13 @@ export default function ManufacturerCustomDesignsPage() {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
   const [retailer, setRetailer] = useState('');
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
 
   const retailerOptions = useMemo(() => uniqueBranchOptions((data ?? []).map((o) => o.storeNameSnapshot)), [data]);
   const filtered = useMemo(
-    () => (data ?? []).filter((o) => matchOrder(o, { search, status, searchLabel: o.category, branch: retailer, branchName: o.storeNameSnapshot })),
-    [data, search, status, retailer],
+    () => (data ?? []).filter((o) => matchOrder(o, { search, status, searchLabel: o.category, branch: retailer, branchName: o.storeNameSnapshot, from, to })),
+    [data, search, status, retailer, from, to],
   );
 
   async function advance(id: string, status: string) {
@@ -53,6 +55,7 @@ export default function ManufacturerCustomDesignsPage() {
           search={search} onSearch={setSearch} searchPlaceholder="Search by order ID / category…"
           status={status} onStatus={setStatus} statusOptions={CUSTOM_ORDER_STATUS_OPTIONS}
           group={retailer} onGroup={setRetailer} groupOptions={retailerOptions} groupAllLabel="All retailers" groupLabel="Retailer"
+          from={from} to={to} onFrom={setFrom} onTo={setTo}
         />
       )}
       {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}

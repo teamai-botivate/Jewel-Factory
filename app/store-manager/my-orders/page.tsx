@@ -8,7 +8,7 @@ import { OrderFilters } from '@/components/orders/OrderFilters';
 import { Button } from '@/components/ui/button';
 import { useApi, apiPost } from '@/hooks/use-api';
 import { titleCaseName } from '@/lib/format';
-import { SM_STATUS_OPTIONS } from '@/lib/order-filters';
+import { SM_STATUS_OPTIONS, inDateRange } from '@/lib/order-filters';
 
 type Item = { id: string; productNameSnapshot: string | null; productImageSnapshot: string | null; quantity: number };
 type BaseOrder = {
@@ -76,12 +76,15 @@ function OrderList({ kind, endpoint }: { kind: Kind; endpoint: string }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
 
   const filtered = useMemo(() => (data ?? []).filter((o) => {
     if (search.trim() && !o.orderNumber.toLowerCase().includes(search.trim().toLowerCase())) return false;
     if (status && bucketOf(o) !== status) return false;
+    if (!inDateRange(o.createdAt, from, to)) return false;
     return true;
-  }), [data, search, status]);
+  }), [data, search, status, from, to]);
 
   async function complete(id: string) {
     setBusy(id);
@@ -95,7 +98,7 @@ function OrderList({ kind, endpoint }: { kind: Kind; endpoint: string }) {
 
   return (
     <div className="space-y-3">
-      <OrderFilters search={search} onSearch={setSearch} status={status} onStatus={setStatus} statusOptions={SM_STATUS_OPTIONS} />
+      <OrderFilters search={search} onSearch={setSearch} status={status} onStatus={setStatus} statusOptions={SM_STATUS_OPTIONS} from={from} to={to} onFrom={setFrom} onTo={setTo} />
       {filtered.length === 0 && <p className="py-8 text-center text-sm text-muted-foreground">No orders match your filters.</p>}
       {filtered.map((o) => {
         const st = statusOf(o);
@@ -150,6 +153,8 @@ function CustomList() {
   const [busy, setBusy] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
 
   const filtered = useMemo(() => (data ?? []).filter((r) => {
     if (search.trim()) {
@@ -157,8 +162,9 @@ function CustomList() {
       if (!hay.includes(search.trim().toLowerCase())) return false;
     }
     if (status && customBucketOf(r) !== status) return false;
+    if (!inDateRange(r.createdAt, from, to)) return false;
     return true;
-  }), [data, search, status]);
+  }), [data, search, status, from, to]);
 
   async function complete(id: string) {
     setBusy(id);
@@ -172,7 +178,7 @@ function CustomList() {
 
   return (
     <div className="space-y-3">
-      <OrderFilters search={search} onSearch={setSearch} searchPlaceholder="Search by order ID / category…" status={status} onStatus={setStatus} statusOptions={SM_STATUS_OPTIONS} />
+      <OrderFilters search={search} onSearch={setSearch} searchPlaceholder="Search by order ID / category…" status={status} onStatus={setStatus} statusOptions={SM_STATUS_OPTIONS} from={from} to={to} onFrom={setFrom} onTo={setTo} />
       {filtered.length === 0 && <p className="py-8 text-center text-sm text-muted-foreground">No requests match your filters.</p>}
       {filtered.map((r) => {
         // Store Manager does NOT see the manufacturer's granular status — that is HO-only.
