@@ -9,7 +9,7 @@ export default function StoreManagerLoginPage() {
       subtitle="Sign in to your store — kiosk, try-on, search & restock."
       loginPath="/api/branch-manager/login"
       redirectTo="/store-manager"
-      footerLinks={[{ prompt: 'Retailer or HO Manager?', label: 'Staff portal', href: '/portal' }]}
+      footerLinks={[{ prompt: 'Retailer or Manufacturer?', label: 'Staff portal', href: '/portal' }]}
     />
   );
 }

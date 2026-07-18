@@ -46,10 +46,10 @@ async function main() {
   console.log(`Seeded manufacturer: ${manufacturer.email}`);
   console.log(`  (login password: ${mfrPassword} — change before production)`);
 
-  // 3. Optional demo store (approved) for local testing
+  // 3. Optional demo Retailer (approved) for local testing.
+  //    The HO Manager role was removed — the Retailer logs in and does everything.
   if (process.env.SEED_DEMO_STORE === 'true') {
     const storePasswordHash = await bcrypt.hash('store123', 10);
-    const managerPasswordHash = await bcrypt.hash('manager123', 10);
     const store = await prisma.store.upsert({
       where: { slug: 'demo' },
       update: {},
@@ -66,16 +66,9 @@ async function main() {
         addressCity: 'Raipur',
         addressState: 'Chhattisgarh',
         addressPincode: '492001',
-        managers: {
-          create: {
-            name: 'Demo Manager',
-            email: 'manager@demo.com',
-            passwordHash: managerPasswordHash,
-          },
-        },
       },
     });
-    console.log(`Seeded demo store: /${store.slug} (store@demo.com / manager@demo.com)`);
+    console.log(`Seeded demo retailer: /${store.slug} (store@demo.com / store123)`);
   }
 }
 

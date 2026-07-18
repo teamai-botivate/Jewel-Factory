@@ -5,11 +5,9 @@ import { getServerEnv } from '@/lib/env';
 import {
   MANUFACTURER_COOKIE,
   STORE_COOKIE,
-  MANAGER_COOKIE,
   BRANCH_MANAGER_COOKIE,
   verifyManufacturerCookie,
   verifyStoreCookie,
-  verifyManagerCookie,
   verifyBranchManagerCookie,
 } from '@/lib/auth';
 import { sendError } from './envelope';
@@ -60,33 +58,19 @@ export const storeGuard: MiddlewareHandler<AppEnv> = async (c, next) => {
   await next();
 };
 
-// ── managerGuard: owner OR manager (order/custom-design approvals, dashboards) ─
-// Owner (jf_store) can do anything a manager can. Sets isOwner accordingly.
+// ── managerGuard: Retailer/owner only (approvals, dashboards, order ops) ───────
+// The HO Manager role was removed — the Retailer (jf_store) does all of this now.
+// Kept as a named guard so the many /store-ops routes don't need touching.
 export const managerGuard: MiddlewareHandler<AppEnv> = async (c, next) => {
   const env = getServerEnv();
-
-  // Owner first
   const ownerResult = await verifyStoreCookie(getCookie(c, STORE_COOKIE), {
     secret: env.STORE_SECRET,
     ttlSeconds: env.COOKIE_TTL_SECONDS,
   });
-  if (ownerResult.valid) {
-    c.set('storeId', ownerResult.storeId);
-    c.set('managerId', ownerResult.storeId); // owner acts as itself
-    c.set('isOwner', true);
-    await next();
-    return;
-  }
-
-  // Manager
-  const mgrResult = await verifyManagerCookie(getCookie(c, MANAGER_COOKIE), {
-    secret: env.MANAGER_SECRET,
-    ttlSeconds: env.COOKIE_TTL_SECONDS,
-  });
-  if (!mgrResult.valid) return sendError(c, 'unauthorized', 'Manager or store login required', 401);
-  c.set('storeId', mgrResult.storeId);
-  c.set('managerId', mgrResult.managerId);
-  c.set('isOwner', false);
+  if (!ownerResult.valid) return sendError(c, 'unauthorized', 'Retailer login required', 401);
+  c.set('storeId', ownerResult.storeId);
+  c.set('managerId', ownerResult.storeId); // owner acts as itself
+  c.set('isOwner', true);
   await next();
 };
 

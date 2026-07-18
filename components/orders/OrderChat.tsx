@@ -67,7 +67,7 @@ export function OrderChat({
         <div className="flex items-center justify-between border-b px-4 py-3">
           <div>
             <p className="text-sm font-semibold">Messages</p>
-            <p className="text-xs text-muted-foreground">{orderLabel} · HO ↔ Store Manager</p>
+            <p className="text-xs text-muted-foreground">{orderLabel} · Head Office ↔ Store Manager</p>
           </div>
           <button onClick={onClose} className="rounded-full p-1 text-muted-foreground hover:bg-muted"><X className="h-4 w-4" /></button>
         </div>

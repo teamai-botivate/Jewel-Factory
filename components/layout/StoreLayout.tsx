@@ -2,59 +2,52 @@
 
 import {
   LayoutDashboard, Package, ShoppingBag, PencilLine, ClipboardCheck,
-  BarChart3, Lightbulb, Store as StoreIcon, UserCog, Settings, LogOut, Menu, X, Gem, Building2,
+  BarChart3, Lightbulb, Store as StoreIcon, Settings, LogOut, Menu, X, Gem, Building2,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
 
-// ownerOnly items are hidden for managers.
+// The Retailer (store owner) is the only account that logs into this portal and
+// does everything (own tasks + all order/custom/restock approvals + chat).
 const NAV = [
   { label: 'Dashboard', href: '/store/dashboard', icon: LayoutDashboard },
   { label: 'Pending Approvals', href: '/store/pending-approvals', icon: ClipboardCheck },
-  { label: 'Manufacturer Catalog', href: '/store/manufacturer-catalog', icon: Gem, ownerOnly: true },
+  { label: 'Manufacturer Catalog', href: '/store/manufacturer-catalog', icon: Gem },
   { label: 'B2B Orders', href: '/store/b2b-orders', icon: Package },
   { label: 'Kiosk Orders', href: '/store/kiosk-orders', icon: ShoppingBag },
   { label: 'Custom Designs', href: '/store/custom-designs', icon: PencilLine },
   { label: 'Intelligence', href: '/store/intelligence', icon: Lightbulb },
   { label: 'Analytics', href: '/store/analytics', icon: BarChart3 },
-  // Kiosk PIN removed — it is now managed per-Store on the Stores (Branches) page.
-  { label: 'Stores (Branches)', href: '/store/branches', icon: Building2 }, // owner + HO manager
-  { label: 'Retailer Profile', href: '/store/profile', icon: StoreIcon, ownerOnly: true },
-  { label: 'Managers (HO)', href: '/store/managers', icon: UserCog, ownerOnly: true },
-  { label: 'Settings', href: '/store/settings', icon: Settings, ownerOnly: true },
+  // Kiosk PIN is managed per-Store on the Stores (Branches) page.
+  { label: 'Stores (Branches)', href: '/store/branches', icon: Building2 },
+  { label: 'Retailer Profile', href: '/store/profile', icon: StoreIcon },
+  { label: 'Settings', href: '/store/settings', icon: Settings },
 ];
 
 export default function StoreLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [isOwner, setIsOwner] = useState<boolean | null>(null);
   const [storeName, setStoreName] = useState<string>('Your Store');
 
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch('/api/manager/me', { cache: 'no-store', credentials: 'same-origin' });
-        if (res.status === 401) { router.push('/store/manager/login'); return; }
-        const json = (await res.json()) as { data?: { role: string; storeName?: string; name?: string } };
-        if (json.data) {
-          setIsOwner(json.data.role === 'owner');
-          if (json.data.storeName) setStoreName(json.data.storeName);
-        }
+        const res = await fetch('/api/store/me', { cache: 'no-store', credentials: 'same-origin' });
+        if (res.status === 401) { router.push('/store/login'); return; }
+        const json = (await res.json()) as { data?: { name?: string } };
+        if (json.data?.name) setStoreName(json.data.name);
       } catch { /* ignore */ }
     })();
   }, [router]);
 
   async function signOut() {
-    await Promise.all([
-      fetch('/api/store/logout', { method: 'POST' }),
-      fetch('/api/manager/logout', { method: 'POST' }),
-    ]);
+    await fetch('/api/store/logout', { method: 'POST' });
     router.push('/portal');
   }
 
-  const items = NAV.filter((n) => !n.ownerOnly || isOwner);
+  const items = NAV;
 
   return (
     <div className="min-h-screen bg-background">
@@ -66,7 +59,7 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
             </div>
             <div className="min-w-0">
               <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                {isOwner === false ? 'HO Manager' : 'Retailer Portal'}
+                Retailer Portal
               </p>
               <p className="truncate text-sm font-semibold">{storeName}</p>
             </div>
@@ -100,7 +93,7 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
           </button>
           <span className="text-sm font-medium">{storeName}</span>
           <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-            {isOwner === false ? 'HO Manager' : 'Retailer'}
+            Retailer
           </span>
         </header>
         <main className="flex-1 p-3 sm:p-4 md:p-6">{children}</main>

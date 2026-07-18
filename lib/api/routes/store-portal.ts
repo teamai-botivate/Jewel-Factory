@@ -5,11 +5,6 @@ import { z } from 'zod';
 import {
   updateStoreBranding,
   updateStoreProfile,
-  listManagers,
-  createManager,
-  updateManager,
-  resetManagerPassword,
-  deleteManager,
 } from '@/lib/db/stores';
 import {
   listBranches, createBranch, updateBranch, deleteBranch,
@@ -79,60 +74,9 @@ storePortalRoutes.patch('/profile', storeGuard, zValidator('json', ProfileBody),
   return sendData(c, result);
 });
 
-// ── Managers (owner only) ─────────────────────────────────────────────────────
-
-storePortalRoutes.get('/managers', storeGuard, async (c) => {
-  return sendData(c, await listManagers(c.get('storeId')));
-});
-
-const CreateManagerBody = z.object({
-  name: z.string().min(2),
-  email: z.string().email(),
-  password: z.string().min(6),
-  phone: z.preprocess(emptyToUndef, z.string().optional()),
-});
-
-storePortalRoutes.post('/managers', storeGuard, zValidator('json', CreateManagerBody), async (c) => {
-  const b = c.req.valid('json');
-  try {
-    const mgr = await createManager(c.get('storeId'), {
-      name: b.name, email: b.email, password: b.password, phone: b.phone as string | undefined,
-    });
-    return sendData(c, mgr, 201);
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    if (msg.includes('Unique constraint') || msg.includes('unique')) {
-      return sendError(c, 'conflict', 'A manager with this email already exists for your store.', 409);
-    }
-    return sendError(c, 'internal_error', msg, 500);
-  }
-});
-
-const UpdateManagerBody = z.object({
-  name: z.string().min(2).optional(),
-  phone: z.preprocess(emptyToUndef, z.string().optional()),
-  isActive: z.boolean().optional(),
-});
-
-storePortalRoutes.patch('/managers/:id', storeGuard, zValidator('json', UpdateManagerBody), async (c) => {
-  const result = await updateManager(c.get('storeId'), c.req.param('id'), c.req.valid('json') as Record<string, unknown>);
-  if (!result) return sendError(c, 'not_found', 'Manager not found', 404);
-  return sendData(c, result);
-});
-
-const MgrPasswordBody = z.object({ password: z.string().min(6) });
-
-storePortalRoutes.put('/managers/:id/password', storeGuard, zValidator('json', MgrPasswordBody), async (c) => {
-  const ok = await resetManagerPassword(c.get('storeId'), c.req.param('id'), c.req.valid('json').password);
-  if (!ok) return sendError(c, 'not_found', 'Manager not found', 404);
-  return sendData(c, { ok: true });
-});
-
-storePortalRoutes.delete('/managers/:id', storeGuard, async (c) => {
-  const ok = await deleteManager(c.get('storeId'), c.req.param('id'));
-  if (!ok) return sendError(c, 'not_found', 'Manager not found', 404);
-  return sendData(c, { ok: true });
-});
+// (HO Manager feature removed — the Retailer/owner does approvals directly.
+//  The store_managers table + rows remain in the DB but there is no create/
+//  manage UI or API, and HO login is disabled.)
 
 // ── Branches (= UI "Stores") — owner only. c.get('storeId') is the retailer id ─
 

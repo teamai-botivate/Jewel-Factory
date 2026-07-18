@@ -16,28 +16,28 @@ Tailwind v4 (CSS-first, no config file) + shadcn/ui (new-york) + lucide + motion
 
 > **Terminology (UI name vs code/table):** the DB kept its original table names when
 > the hierarchy was added, so watch the mapping:
-> - `stores` table + `jf_store` login = **Retailer** (was "Store Owner")
-> - `store_managers` table + `jf_manager` login = **HO Manager** (was "Manager")
+> - `stores` table + `jf_store` login = **Retailer** (= Head Office; was "Store Owner")
+> - `store_managers` table = **LEGACY/INERT** — the old "HO Manager" role is REMOVED; table kept only for historical approver FK rows, no login/creation
 > - `branches` table = **Store** (a retailer's individual shop) — NEW
 > - `branch_managers` table + `jf_branch_manager` login = **Store Manager** — NEW
 
+**3 staff roles + Customer:**
 1. **Manufacturer** — global catalog (Gold only, NO price, auto `JF-XXXX`), approves **Retailer** registrations, receives B2B/kiosk/custom orders. NEVER sees customer data; ships to the **Retailer's fixed HO address**. Portal `/manufacturer/*`.
-2. **Retailer** (`stores`) — self-registers → manufacturer approves. Has ONE fixed HO address. Creates its HO Manager, its **Stores (branches)**, and each branch's Store Managers. Portal `/store/*` (login `/store/login`). Branch mgmt at `/store/branches`.
-3. **HO Manager** (`store_managers`) — the retailer's head-office manager. Does **ALL approvals** for every branch (kiosk/B2B/custom); can **edit the requirement note**. Portal `/store/*` (login `/store/manager/login`).
-4. **Store Manager** (`branch_managers`) — runs ONE branch. Login `/store-manager/login` → that branch's **Kiosk** (customer, no PII) + **Restock** (PIN-walled). Sends orders to HO for approval. Portal `/store-manager/*`.
-5. **Customer** — walk-in, NO login, **NO data stored**. The Store Manager helps them on the kiosk. Requirement captured as an editable note only. (Legacy public kiosk `/<storeSlug>/*` still exists but the primary path is the Store Manager's `/store-manager/kiosk`.)
+2. **Retailer** (`stores`) = **Head Office** — self-registers → manufacturer approves. Has ONE fixed HO address. Creates its **Stores (branches)** and each branch's Store Managers. **Also does ALL approvals** (kiosk/B2B/custom) for every branch, can **edit the requirement note**, and chats with Store Managers per order — this absorbs everything the old "HO Manager" did. Portal `/store/*` (login `/store/login`). Branch mgmt at `/store/branches`.
+3. **Store Manager** (`branch_managers`) — runs ONE branch. Login `/store-manager/login` → that branch's **Kiosk** (customer, no PII) + **Restock** (PIN-walled). Sends orders to the Retailer (Head Office) for approval. Portal `/store-manager/*`.
+4. **Customer** — walk-in, NO login, **NO data stored**. The Store Manager helps them on the kiosk. Requirement captured as an editable note only. (Legacy public kiosk `/<storeSlug>/*` still exists but the primary path is the Store Manager's `/store-manager/kiosk`.)
 
 ## Core rules (never break)
 
 - **No price, no metal** anywhere (manufacturer form, catalog, kiosk, orders).
 - **Auto design number** `JF-0001` via Postgres sequence (`lib/design-number.ts`).
 - **Customer PII is NOT stored and never reaches the manufacturer.** Kiosk/custom orders carry only products + qty + an editable `requirementNote`. Customer name/phone are nullable (store manager keeps them outside the system). Manufacturer sees: retailer name, branch name, requirement note, retailer HO ship-to address.
-- **The requirement note** (`requirementNote` on kiosk/B2B orders) is written by the Store Manager, **editable by Store Manager AND HO Manager** (PATCH `/store/{kiosk,b2b}-orders/:id/note`), and forwarded to the manufacturer.
-- **Restock is PIN-walled** per branch (`branches.restock_pin_hash`, cookie `jf_restock`). Set/reset by Store Manager, HO Manager, or Retailer.
+- **The requirement note** (`requirementNote` on kiosk/B2B orders) is written by the Store Manager, **editable by Store Manager AND Retailer (Head Office)** (PATCH `/store/{kiosk,b2b}-orders/:id/note`), and forwarded to the manufacturer.
+- **Restock is PIN-walled** per branch (`branches.restock_pin_hash`, cookie `jf_restock`). Set/reset by Store Manager or Retailer (Head Office).
 - **Store Manager "My Orders"** (`/store-manager/my-orders`) — their branch's kiosk/custom/restock orders with status (Pending→Approved→**Completed**). Store Manager sets **Completed** (`completedAt`) when the piece reaches the customer/store — a flag, separate from the approval status.
-- **Per-order chat** (`order_messages`, polymorphic by `OrderKind`+orderId) — HO Manager ↔ Store Manager, scoped by `storeId`. APIs: `/api/store/messages/:kind/:id` (HO) and `/api/branch-manager/messages/:kind/:id` (Store Manager). Shared UI `components/orders/OrderChat.tsx`.
+- **Per-order chat** (`order_messages`, polymorphic by `OrderKind`+orderId) — Retailer (Head Office) ↔ Store Manager, scoped by `storeId`. APIs: `/api/store/messages/:kind/:id` (Head Office) and `/api/branch-manager/messages/:kind/:id` (Store Manager). Shared UI `components/orders/OrderChat.tsx`. **NOTE:** the `MessageSender.HO` enum value and `OrderChat` `viewer='HO'` / `sender:'HO'` are DATA — do NOT rename them; only display text reads "Head Office".
 - **Store Manager storefront = LuxeMatch look** (rich hero + sections), header/nav/branding = Jewel Factory. Gold-only — no blue/diamond stock imagery. Don't simplify it back to a plain dashboard.
-- **Owner-approve writes `null`** to `*ApprovedById`/`reviewedById` (owner is not a `StoreManager` row — see `approverIdOrNull` in `lib/api/guards.ts`).
+- **Owner-approve writes `null`** to `*ApprovedById`/`reviewedById` (the Retailer/owner is not a `StoreManager` row — see `approverIdOrNull` in `lib/api/guards.ts`). Since the HO Manager role is gone, `approverIdOrNull` now **always returns null** (all approvals are the owner).
 - **Kiosk order items** carry `manufacturerProductId` + snapshots; `product_id` FK is for STORE products only.
 - **Branding on kiosk** — store's own logo + name; footer "Powered by AT Jewellers".
 
@@ -47,11 +47,12 @@ Tailwind v4 (CSS-first, no config file) + shadcn/ui (new-york) + lucide + motion
 app/
   layout.tsx, page.tsx (landing -> /portal), globals.css
   api/[[...route]]/route.ts   -> mounts lib/api/app.ts (Hono). Exports GET/POST/PATCH/PUT/DELETE.
-  portal/                     staff login selector (4 cards: Retailer / HO Manager / Store Manager / Manufacturer)
+  portal/                     staff login selector (3 cards: Retailer / Store Manager / Manufacturer)
   manufacturer/               login, dashboard, catalog(+new/[id]), orders(+[id]), kiosk-orders, custom-designs, stores, store-registrations
-  store/                      RETAILER + HO MANAGER portal: login/register/forgot/reset, manager/login+forgot+reset, dashboard,
+  store/                      RETAILER (Head Office) portal: login/register/forgot/reset, dashboard,
                               pending-approvals (branch + editable note), manufacturer-catalog, b2b-orders, kiosk-orders,
-                              custom-designs, intelligence, analytics, profile, managers (HO), branches (stores + branch mgrs + PIN), settings
+                              custom-designs, intelligence, analytics, profile, branches (stores + branch mgrs + PIN), settings
+                              (the old HO Manager login /store/manager/* + Managers(HO) page are REMOVED)
   store-manager/              STORE MANAGER storefront (login-gated, LuxeMatch-style, real catalog data):
                               home (full-bleed hero + Popular now + Try-On banner + More to explore + rich footer),
                               kiosk, try-on, search, custom-design (image upload), restock (PIN-walled),
@@ -77,19 +78,21 @@ hooks/  use-api, use-guest-cart, use-b2b-cart, use-try-on-engine
 prisma/ schema.prisma, seed.ts
 ```
 
-## Auth (4 login cookies + 2 PIN cookies)
+## Auth (3 login cookies + 2 PIN cookies)
 
 | Cookie | Role (UI) | Secret | Payload |
 |---|---|---|---|
 | `jf_manufacturer` | Manufacturer | `MANUFACTURER_SECRET` | `manufacturerId` |
-| `jf_store` | Retailer | `STORE_SECRET` | `storeId` (= retailerId) |
-| `jf_manager` | HO Manager | `MANAGER_SECRET` | `managerId.storeId` |
+| `jf_store` | Retailer (Head Office) | `STORE_SECRET` | `storeId` (= retailerId) |
+| `jf_manager` | **REMOVED** (was HO Manager) — login gone; `MANAGER_SECRET` still exists in env but no cookie is issued | `MANAGER_SECRET` | *(deprecated)* |
 | `jf_branch_manager` | Store Manager | `BRANCH_MANAGER_SECRET` (falls back to `MANAGER_SECRET`) | `bmId.branchId.retailerId` |
 | `jf_kiosk` | legacy kiosk device unlock | `STORE_SECRET:kiosk` | `storeId` |
 | `jf_restock` | branch restock unlock (PIN) | `STORE_SECRET:restock` | `branchId` |
 
+> The `store_managers` DB table remains for historical approver FK references only — no login/creation.
+
 All HMAC-SHA256 (Web Crypto, Edge-safe, `lib/auth.ts`). Passwords bcrypt (`lib/password.ts`, Node-only).
-Guards in `lib/api/guards.ts`: `manufacturerGuard`, `storeGuard` (retailer/owner-only), `managerGuard` (owner OR HO manager, sets `isOwner`), `branchManagerGuard` (store manager; sets `branchId` + `branchManagerId` + `storeId`=retailerId for tenancy). Branch-manager API is `/api/branch-manager/*` (`lib/api/routes/branch-manager.ts`), per-route guarded.
+Guards in `lib/api/guards.ts`: `manufacturerGuard`, `storeGuard` (retailer/owner-only), `managerGuard` (now **owner-only** — accepts `jf_store` only; the HO-manager fallback is removed, so `isOwner` is always true), `branchManagerGuard` (store manager; sets `branchId` + `branchManagerId` + `storeId`=retailerId for tenancy). Branch-manager API is `/api/branch-manager/*` (`lib/api/routes/branch-manager.ts`), per-route guarded.
 
 ## Tenancy
 
@@ -106,7 +109,7 @@ Guards in `lib/api/guards.ts`: `manufacturerGuard`, `storeGuard` (retailer/owner
 
 ## Store registration → approval → email
 
-- Store self-registers at `/store/register` (status `PENDING`, `isActive=false`, no `manufacturerId`) + creates its first manager in the same transaction.
+- Store self-registers at `/store/register` (status `PENDING`, `isActive=false`, no `manufacturerId`). (A `store_managers` row may still be written silently in the same transaction, but it is inert — there is no HO Manager login; the Retailer is the Head Office.)
 - Manufacturer approves at `/manufacturer/store-registrations` → `approveRegistration` sets `APPROVED` + `isActive=true` + links `manufacturerId`, and returns owner email + slug + manager emails.
 - On approve, the store OWNER gets a **store-approved email** (`storeApprovedEmail` in `lib/email.ts`, sent fire-and-forget from `manufacturer-stores.ts`): confirmation + owner/manager login emails + portal URLs + kiosk URL (`/<slug>`) + forgot-password links. **No passwords** in the email (bcrypt-hashed; owner set them at registration). Email only sends if SMTP is configured, else logs to console — never blocks approval.
 - Store + managers are NOT hardcoded — only `pnpm db:seed` with `SEED_DEMO_STORE=true` creates the demo store for testing.
@@ -143,10 +146,12 @@ pnpm migrate:branches               # Option-A: default "Main Store" branch per 
 
 ## Status
 
+**Latest session — HO Manager role REMOVED:** The Retailer is now the Head Office and does everything the old HO Manager did (all kiosk/custom/restock approvals + per-order chat + all order lists/filters) plus its own tasks. `/store/manager/*` + `/api/manager/*` + the Managers(HO) page (`/store/managers`) are deleted; the portal has **3 cards** (Retailer / Store Manager / Manufacturer). The `store_managers` table is kept but inert (historical approver FKs only). `isOwner` is always true in store-ops now; `approverIdOrNull` always returns null. The `MessageSender.HO` enum + `OrderChat` `viewer='HO'`/`sender:'HO'` values are DATA — unchanged; only display text says "Head Office".
+
 **Multi-store hierarchy + Store Manager storefront + per-order chat: all on branch `retailer-multistore`.**
-Retailer → HO Manager → Stores(branches) → Store Managers → Customer. Store Manager has a
+Retailer (Head Office) → Stores(branches) → Store Managers → Customer. Store Manager has a
 full LuxeMatch-style storefront (hero/catalog/try-on/search/custom/restock) + My Orders
-(status, Mark Completed, HO chat). HO ↔ Store Manager per-order chat both sides.
+(status, Mark Completed, Head Office chat). Head Office ↔ Store Manager per-order chat both sides.
 **Live DB (Supabase) has all 5 migrations applied** (branch_hierarchy + order_messages done;
 `migrate:branches` run once). `master` stays at the pre-hierarchy state — **merge `retailer-multistore` → `master` when handing over.**
 
@@ -156,7 +161,7 @@ full LuxeMatch-style storefront (hero/catalog/try-on/search/custom/restock) + My
 - **Store Manager kiosk + search** — product cards open a detail modal (gallery, specs, description, **Try On** when AR, **Similar designs**); modal image click-to-zoom; close X at card top-right; Try-On page reads `?product=` (auto-select) + `?back=` (Back button to originating page).
 - **Login fix** — `StaffLoginForm` resets loading on a server error (wrong creds no longer freeze the button). Affects all 4 logins.
 - **HO ↔ Store Manager chat** added on the HO custom-designs page (was only on pending-approvals). Store Manager no longer sees the manufacturer's granular status ("Approved by HO" only).
-- **Nav** — removed "Kiosk PIN" from the Retailer/HO sidebar (managed per-Store on Branches); "Stores (Branches)" now visible to the **HO Manager** too; "Store Profile" → "**Retailer Profile**".
+- **Nav** — removed "Kiosk PIN" from the Retailer sidebar (managed per-Store on Branches); "Store Profile" → "**Retailer Profile**". (The old HO Manager sidebar is gone — the Retailer/Head Office has the full menu.)
 - **Order filters (all lists)** — reusable `components/orders/OrderFilters.tsx` + `lib/order-filters.ts`: order-ID search + status dropdown + **From/To date range** (on `createdAt`) everywhere; **Store (branch) filter** on HO lists (kiosk/custom/b2b) with a branch badge per row; **Retailer filter** on Manufacturer lists (kiosk/custom/orders); Store Manager My Orders searches by order-ID + derived status bucket + date range. HO custom list gained `branch{name}` via `listCustomRequests`.
 - **Portal** — "JEWEL FACTORY" text wordmark (was the stale LuxeMatch logo image).
 
@@ -172,7 +177,8 @@ full LuxeMatch-style storefront (hero/catalog/try-on/search/custom/restock) + My
 - **SMTP on Render:** port **465** (587 blocked → ETIMEDOUT) + `family: 4` in the transporter (IPv6 unreachable → ENETUNREACH). `family` isn't in nodemailer's TS type — cast `as nodemailer.TransportOptions`.
 - **Order-item images:** kiosk items snapshot the image at order time; B2B items snapshot image + design number (migration `20260715120000_b2b_item_image`) — only orders placed AFTER that commit have B2B images. Store list APIs `include: { items: true }`; thumbnails are `h-20 w-20 object-contain` on white.
 - **Migrations on Supabase pooler** hit an advisory-lock timeout via `migrate dev`. Workaround used: apply DDL with `prisma db execute --url <DIRECT_URL>`, hand-write the migration file, and insert the `_prisma_migrations` row manually. The `20260717000000_branch_hierarchy` migration is hand-authored + idempotent (IF NOT EXISTS / DROP NOT NULL) so a partial re-run is safe. Render runs `pnpm run start` (`next start`) — migrations are NOT auto-applied; use `pnpm render-start` or Docker to auto-migrate.
-- **Terminology trap:** `stores` table = Retailer, `store_managers` = HO Manager, `branches` = Store, `branch_managers` = Store Manager. Don't assume "store" means a shop in code — it's the retailer. New shop-level things go on `branches`.
+- **Terminology trap:** `stores` table = Retailer (= Head Office), `store_managers` = **legacy/inert** (old HO Manager role removed; kept for historical approver FKs), `branches` = Store, `branch_managers` = Store Manager. Don't assume "store" means a shop in code — it's the retailer. New shop-level things go on `branches`.
+- **Don't rename the `MessageSender.HO` enum or `OrderChat` `viewer='HO'`/`sender:'HO'` values** — those are DATA (stored rows + wire values). The HO Manager role is gone, but "HO" here just means the Head Office side of the chat, which is now the Retailer. Only the display text should read "Head Office".
 - **Branch tenancy:** `branchManagerGuard` sets `storeId = retailerId`, so existing retailer-scoped DB helpers work unchanged; `branchId` narrows to the shop. Kiosk/restock orders from a branch carry `branchId` + `branchNameSnapshot`.
 - **Kiosk sanitize is a DENYLIST** (`manufacturer-orders.ts sanitizeKiosk`) — it drops `customerName/Phone/Email/deliveryAddress` and lets everything else (incl. `branchNameSnapshot`, `requirementNote`) pass through. Any NEW PII field must be added to the drop-list.
 - **`CustomDesignOrder` has NO branch/requirement columns** (only the sanitized snapshot). To surface branch/note on the manufacturer's custom-design view you'd add columns there + copy them in `forwardCustomRequest`.

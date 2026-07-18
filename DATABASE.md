@@ -16,8 +16,8 @@ Hierarchy baad me add hui, isliye table naam UI naam se alag hain:
 
 | DB table | Code model | UI / asli matlab |
 |---|---|---|
-| `stores` | `Store` | **Retailer** (business jo manufacturer se deal karta hai) |
-| `store_managers` | `StoreManager` | **HO Manager** (Head-Office, saare approvals) |
+| `stores` | `Store` | **Retailer** (= Head Office; business jo manufacturer se deal karta hai, saare approvals bhi yahi karta hai) |
+| `store_managers` | `StoreManager` | **LEGACY / INERT** — pehle "HO Manager" role tha, ab **role hata diya gaya** (Retailer hi Head Office hai). Table sirf historical approver references (reviewedBy / *ApprovedById) ke liye rakhi hai — login/creation ke liye use NAHI hoti. |
 | `branches` | `Branch` | **Store** (retailer ki ek dukaan/branch) |
 | `branch_managers` | `BranchManager` | **Store Manager** (ek branch chalata hai) |
 
@@ -29,8 +29,8 @@ Hierarchy baad me add hui, isliye table naam UI naam se alag hain:
 
 ```
 manufacturers (1)
-  └─ stores [RETAILER] (many)        stores.manufacturer_id → manufacturers.id (null jab tak approve na ho)
-       ├─ store_managers [HO] (many) store_managers.store_id → stores.id
+  └─ stores [RETAILER = Head Office] (many)  stores.manufacturer_id → manufacturers.id (null jab tak approve na ho)
+       ├─ store_managers [LEGACY/INERT] (many) store_managers.store_id → stores.id  (old HO Manager; role removed)
        └─ branches [STORE] (many)    branches.retailer_id → stores.id
             └─ branch_managers [STORE MGR] (many)  branch_managers.branch_id → branches.id
 ```
@@ -46,10 +46,10 @@ Customer ka koi table nahi — walk-in, PII store nahi hota.
 |---|---|
 | `manufacturers` | Global admin. email + bcrypt password. |
 | `stores` (**Retailer**) | slug (kiosk), email+password, registration_status (PENDING/APPROVED/REJECTED), branding (logo/tagline), fixed HO address, kiosk_pin_hash. |
-| `store_managers` (**HO Manager**) | store_id, email+password. Unique (store_id, email). |
+| `store_managers` (**legacy/inert** — old HO Manager, role removed) | store_id, email+password. Unique (store_id, email). Table remains for historical approver references; no login/creation. |
 | `branches` (**Store**) | retailer_id, name, fixed address, phone, **restock_pin_hash**, is_active. |
 | `branch_managers` (**Store Manager**) | branch_id, email+password. Unique (branch_id, email). |
-| `password_reset_tokens` | email + role + hashed token + expiry. Owner/HO reset. |
+| `password_reset_tokens` | email + role + hashed token + expiry. Retailer (owner) reset. |
 
 ### MANUFACTURER CATALOG (global, gold-only, no price)
 | Table | Kya |
@@ -80,7 +80,7 @@ Customer ka koi table nahi — walk-in, PII store nahi hota.
 ### CHAT (naya)
 | Table | Kya |
 |---|---|
-| `order_messages` | **Per-order chat HO ↔ Store Manager.** Polymorphic: (order_kind = KIOSK/B2B/CUSTOM, order_id). sender (HO/STORE_MANAGER), sender_name, body. Scoped by store_id (retailer). Ek table teeno order-types ke liye. |
+| `order_messages` | **Per-order chat Head Office (Retailer) ↔ Store Manager.** Polymorphic: (order_kind = KIOSK/B2B/CUSTOM, order_id). sender (`HO`/`STORE_MANAGER` — `HO` = the Head Office/Retailer side; enum value is DATA, don't rename), sender_name, body. Scoped by store_id (retailer). Ek table teeno order-types ke liye. |
 
 ### TAXONOMY + INTELLIGENCE
 | Table | Kya |
@@ -132,5 +132,5 @@ pnpm migrate:branches     # har retailer me default "Main Store" branch + purane
 - Retailer-scoped queries: `storeId` (retailer id) se filter.
 - Branch-scoped (Store Manager): `branchId` (guard cookie se; storeId = retailerId bhi set).
 - Manufacturer: global catalog.
-- `order_messages`: `storeId` se scoped — HO aur Store Manager sirf apne orders ke messages dekh sakte.
+- `order_messages`: `storeId` se scoped — Head Office (Retailer) aur Store Manager sirf apne orders ke messages dekh sakte.
 - Customer PII kabhi manufacturer tak nahi jaata.

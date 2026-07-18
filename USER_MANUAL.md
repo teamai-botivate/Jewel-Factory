@@ -21,7 +21,7 @@ laata hai:
 - **Retailer** (shop-owner company) apne kai **Stores (branches)** chala sakta hai.
 - Har Store ka **Store Manager** customer ke saamne kaam karta hai (kiosk pe order,
   try-on, custom design).
-- Sab orders **Head Office (HO) Manager** ke paas approval ke liye jaate hain,
+- Sab orders **Retailer (Head Office)** ke paas approval ke liye jaate hain,
   phir manufacturer ke paas — poori tracking ke saath.
 
 **Design ke 4 pakke niyam (bahut important):**
@@ -29,43 +29,41 @@ laata hai:
 1. **Price kahin nahi dikhti** — gold-only business hai, keemat roz badalti hai.
 2. **Customer ki personal detail (naam/phone) manufacturer tak nahi jaati** — order
    me sirf product + quantity + ek "requirement note" jaata hai.
-3. **Manufacturer hamesha Retailer ke fixed HO address pe hi bhejta hai** — kisi
-   branch ya customer ke ghar nahi. HO wahaan se branches me baantta hai.
+3. **Manufacturer hamesha Retailer ke fixed Head Office address pe hi bhejta hai** —
+   kisi branch ya customer ke ghar nahi. Retailer (Head Office) wahaan se branches me baantta hai.
 4. **Har design ka apne aap number banta hai** — `JF-0001`, `JF-0002`… (manual nahi).
 
 ---
 
-## 2. System me kaun-kaun hai (5 log)
+## 2. System me kaun-kaun hai (4 log)
 
 | # | Role | Ye kaun hai | Kaam ek line me |
 |---|------|-------------|-----------------|
 | 1 | **Manufacturer** | Factory / admin | Catalog banata hai, retailers approve karta hai, orders bhejta hai |
-| 2 | **Retailer** (Store Owner) | Jeweller company ka maalik | Apne Stores (branches) + staff banata hai, restock order karta hai |
-| 3 | **HO Manager** (Head Office) | Retailer ka office manager | Sab orders approve karta hai, Store Managers se baat karta hai |
-| 4 | **Store Manager** | Ek shop chalane wala staff | Customer ke saamne kiosk/try-on/order/custom design |
-| 5 | **Customer** (walk-in) | Dukaan me aaya grahak | Sirf dekhta hai — koi login nahi, koi detail store nahi hoti |
+| 2 | **Retailer** (Store Owner / Head Office) | Jeweller company ka maalik | Apne Stores (branches) + staff banata hai, restock order karta hai, **sab orders approve karta hai + Store Managers se chat** |
+| 3 | **Store Manager** | Ek shop chalane wala staff | Customer ke saamne kiosk/try-on/order/custom design |
+| 4 | **Customer** (walk-in) | Dukaan me aaya grahak | Sirf dekhta hai — koi login nahi, koi detail store nahi hoti |
 
 **Hierarchy:**
-`Manufacturer → Retailer → HO Manager → Stores (branches) → Store Managers → Customer`
+`Manufacturer → Retailer → Stores (branches) → Store Managers → Customer`
 
 ---
 
 ## 3. Login — kaha, kaise (URLs + Credentials)
 
-Sabse pehla page: **`/portal`** — yahaan 4 login cards hote hain. Apna card chuno.
+Sabse pehla page: **`/portal`** — yahaan 3 login cards hote hain. Apna card chuno.
 
 | Role | Login page | Demo Email | Demo Password |
 |------|-----------|------------|---------------|
 | **Manufacturer** | `/manufacturer/login` | `admin@atjewellers.com` | `manufacturer123` |
-| **Retailer** (owner) | `/store/login` | `store@demo.com` | `store123` |
-| **HO Manager** | `/store/manager/login` | `manager@demo.com` | `manager123` |
+| **Retailer** (owner / Head Office) | `/store/login` | `store@demo.com` | `store123` |
 | **Store Manager** | `/store-manager/login` | *(banana padega — niche §7)* | *(jo banate waqt set karo)* |
 
 > **Zaroori notes:**
 > - Ye demo credentials sirf tab bante hain jab system fresh install pe seed hota
->   hai. **Manufacturer hamesha banta hai**; Retailer + HO Manager sirf demo mode
+>   hai. **Manufacturer hamesha banta hai**; Retailer sirf demo mode
 >   (`SEED_DEMO_STORE=true`) me. Live client ke liye password **turant badlo**.
-> - **Store Manager ka koi default account nahi** — use Retailer ya HO Manager
+> - **Store Manager ka koi default account nahi** — use Retailer
 >   banata hai (§7 dekho).
 > - Password field me **dot (••••)** dikhte hain; aankh 👁 icon se dekh sakte ho.
 > - Galat password pe error dikhega aur button turant free ho jaata hai — sahi
@@ -90,28 +88,25 @@ Factory/admin. Ye dekhta/karta hai:
 - **Retailer Registrations** — naye retailer ke sign-up **Approve / Reject** karo.
 
 **Kya NAHI dikhta:** customer ka naam/phone/ghar ka address — kuch bhi nahi. Sirf
-retailer ka naam, branch ka naam, requirement note, aur retailer ka HO ship address.
+retailer ka naam, branch ka naam, requirement note, aur retailer ka Head Office ship address.
 
-### 4.2 Retailer / Store Owner (`/store/…`)
-Company ka maalik. Poora menu dikhta hai:
+### 4.2 Retailer / Store Owner / Head Office (`/store/…`)
+Company ka maalik — **ye hi Head Office hai**. Poora menu dikhta hai, aur ye khud
+**sab approvals + chat** bhi sambhalta hai (jo pehle alag "HO Manager" karta tha):
 
 - **Dashboard**, **Pending Approvals**, **B2B Orders**, **Kiosk Orders**, **Custom Designs**
 - **Manufacturer Catalog** — poora catalog dekho + restock order banao.
 - **Intelligence / Analytics** — demand/insights.
 - **Stores (Branches)** — apne shops + Store Managers banao (§7).
-- **Retailer Profile** — company detail + fixed delivery (HO) address.
-- **Managers (HO)** — Head Office managers banao (§7).
+- **Retailer Profile** — company detail + fixed delivery (Head Office) address.
 - **Settings** — company settings.
 
-### 4.3 HO Manager (`/store/…` — same portal, kam rights)
-Retailer ke office ka manager. Retailer jaisa hi menu, par ye **nahi** dikhta:
-Manufacturer Catalog, Retailer Profile, Managers (HO), Settings.
+**Approvals + chat (pehle HO Manager karta tha, ab Retailer khud):** har branch ke
+saare orders **approve/reject** karna, requirement note edit karna, aur Store
+Managers se **chat** karna. Manufacturer ke paas order tabhi jaata hai jab
+Retailer (Head Office) approve karta hai.
 
-**Main kaam:** har branch ke saare orders **approve/reject** karna, requirement
-note edit karna, aur Store Managers se **chat** karna. Manufacturer ke paas order
-tabhi jaata hai jab HO Manager approve karta hai.
-
-### 4.4 Store Manager (`/store-manager/…`)
+### 4.3 Store Manager (`/store-manager/…`)
 Ek shop chalane wala staff. Customer ke saamne isi device pe kaam karta hai:
 
 - **Home**
@@ -121,12 +116,12 @@ Ek shop chalane wala staff. Customer ke saamne isi device pe kaam karta hai:
 - **Custom Design** — customer ka special order form (image + specs + note).
 - **Restock** — manufacturer se stock mangao (**PIN se khulta hai**).
 - **My Orders** — apne bheje orders track karo (search + status + date filter),
-  HO se chat karo, aur pahunchne pe **Mark Completed** karo.
+  Head Office (Retailer) se chat karo, aur pahunchne pe **Mark Completed** karo.
 
 **Store Manager ko manufacturer ka detailed status nahi dikhta** — sirf:
-Pending / Approved by HO / Rejected / Completed.
+Pending / Approved by Head Office / Rejected / Completed.
 
-### 4.5 Customer (walk-in — koi login nahi)
+### 4.4 Customer (walk-in — koi login nahi)
 Store Manager ke device pe browse karta hai: catalog dekhna, AR try-on, photo
 search, custom design maangna. **Uski koi bhi personal detail system me save nahi
 hoti** — Store Manager use apne paas rakhta hai; system me sirf "requirement note"
@@ -136,51 +131,52 @@ jaata hai.
 
 ## 5. Orders kaise chalte hain (3 flows)
 
-Teenon orders ka **ek hi rasta**: Store Manager banata hai → **HO Manager approve
-karta hai** → Manufacturer ke paas jaata hai → Manufacturer Retailer ke HO address
-pe bhejta hai → HO branch ko deta hai → Store Manager **Mark Completed** karta hai.
+Teenon orders ka **ek hi rasta**: Store Manager banata hai → **Retailer (Head
+Office) approve karta hai** → Manufacturer ke paas jaata hai → Manufacturer Retailer
+ke Head Office address pe bhejta hai → Head Office branch ko deta hai → Store Manager
+**Mark Completed** karta hai.
 
 ### (a) Kiosk order (customer catalog se kharidta hai)
 1. Store Manager kiosk pe order banata hai: products + quantity + requirement note
    (customer ka naam/phone nahi).
-2. HO Manager ko dikhta hai "Store X ne bheja" — note edit kar sakta hai — phir **Approve**.
+2. Retailer (Head Office) ko dikhta hai "Store X ne bheja" — note edit kar sakta hai — phir **Approve**.
 3. Manufacturer ko milta hai (note + branch ka naam; koi customer data nahi).
-4. Manufacturer Retailer ke HO address pe bhejta hai; HO branch ko deta hai.
-5. Beech me HO ↔ Store Manager **chat** kar sakte hain; pahunchne pe Store Manager
+4. Manufacturer Retailer ke Head Office address pe bhejta hai; Head Office branch ko deta hai.
+5. Beech me Head Office ↔ Store Manager **chat** kar sakte hain; pahunchne pe Store Manager
    **Mark Completed**.
 
 ### (b) Custom design request (customer ko special piece chahiye)
 1. Store Manager `Custom Design` form bharta hai: category, weight, purity, note,
    reference image (customer detail nahi).
-2. HO Manager **Approve & Forward** karta hai (chat bhi kar sakta hai).
+2. Retailer (Head Office) **Approve & Forward** karta hai (chat bhi kar sakta hai).
 3. Manufacturer ko sanitized order milta hai (`CD-xxxx`), koi customer data nahi.
-4. Manufacturer HO address pe bhejta hai; Store Manager track + **Mark Completed**.
-   (Full manufacturer status — confirmed/shipped/tracking — sirf HO Manager ko dikhta hai.)
+4. Manufacturer Head Office address pe bhejta hai; Store Manager track + **Mark Completed**.
+   (Full manufacturer status — confirmed/shipped/tracking — sirf Retailer (Head Office) ko dikhta hai.)
 
 ### (c) Restock / B2B order (shop stock mangata hai)
 1. Store Manager `Restock` kholta hai → **branch ka Restock PIN** daalta hai.
 2. Manufacturer catalog se order karta hai.
-3. HO Manager approve karta hai.
-4. Manufacturer HO address pe bhejta hai; **Delivered** hote hi stock retailer ke
+3. Retailer (Head Office) approve karta hai.
+4. Manufacturer Head Office address pe bhejta hai; **Delivered** hote hi stock retailer ke
    product list me aa jaata hai.
 5. Chat + Mark Completed same.
 
 > **Requirement note** = customer ki demand (size, engraving, kab tak chahiye).
-> Store Manager likhta hai, HO Manager bhi edit kar sakta hai, aur ye manufacturer
-> tak jaata hai. **Isme kabhi personal detail mat likho.**
+> Store Manager likhta hai, Retailer (Head Office) bhi edit kar sakta hai, aur ye
+> manufacturer tak jaata hai. **Isme kabhi personal detail mat likho.**
 
 ---
 
 ## 6. Orders dhoondhna / filter karna (sab jagah)
 
-Har order list pe (HO, Manufacturer, Store Manager — sab):
+Har order list pe (Retailer/Head Office, Manufacturer, Store Manager — sab):
 
 - 🔍 **Order-ID search** — order number type karo (jaise `GK-…`, `B2B-…`, `CD-…`).
 - **Status filter** — Pending / Approved / Shipped / Completed… dropdown.
 - **From / To date** — kis date range ke orders chahiye.
-- **HO** ke paas extra: **Store (branch) wise** filter (kaunsa order kis Store se aaya).
+- **Retailer (Head Office)** ke paas extra: **Store (branch) wise** filter (kaunsa order kis Store se aaya).
 - **Manufacturer** ke paas extra: **Retailer wise** filter (kaunsa order kis Retailer se aaya).
-- Order detail me: HO ko **branch** dikhta hai, Manufacturer ko **retailer** dikhta hai.
+- Order detail me: Retailer (Head Office) ko **branch** dikhta hai, Manufacturer ko **retailer** dikhta hai.
 
 ---
 
@@ -190,10 +186,11 @@ Har order list pe (HO, Manufacturer, Store Manager — sab):
 Retailer ye form bharta hai (3 hisse):
 1. **Store Details:** Store name, Owner name, Owner phone, Store email (login),
    Password (min 6), Logo URL (optional).
-2. **Fixed Delivery Address (HO address):** Street, City, State, Pincode, Landmark
-   (optional) — **yahi pe manufacturer bhejega**.
-3. **Manager Account:** Manager name, phone (optional), email, password (min 6) —
-   ye pehla HO Manager banta hai.
+2. **Fixed Delivery Address (Head Office address):** Street, City, State, Pincode,
+   Landmark (optional) — **yahi pe manufacturer bhejega**.
+
+Registration se **Retailer account** ban jaata hai (yahi login `/store/login` pe
+chalega, aur yahi Head Office ka kaam — approvals + chat — sambhalta hai).
 
 Submit ke baad message: "Registration submitted — approval ke baad access milega."
 Phir **Manufacturer approve karega** (niche).
@@ -204,15 +201,10 @@ pe **Approve** ya **Reject**. Approve karte hi retailer ko access mil jaata hai 
 catalog se link ho jaata hai.
 
 ### Retailer Stores (branches) + Store Managers banaye — `/store/branches`
-*(HO Manager bhi is page ko dekh/use kar sakta hai.)*
 - **Add a Store (branch):** Store name*, phone, street, city, state, pincode,
   landmark. Har branch ka **Restock PIN** (min 4 digit) bhi set kar sakte ho.
 - **Add Store Managers** (store expand karke): Name*, phone, Email*, Password (min 6)*.
   Active/inactive toggle, password reset, remove — sab yahaan.
-
-### Retailer HO Managers banaye — `/store/managers`  *(sirf owner)*
-Add Manager: Name*, phone, Email*, Password (min 6)*. Ye managers orders aur custom
-design approve kar sakte hain.
 
 ---
 
@@ -248,12 +240,12 @@ design approve kar sakte hain.
 
 ---
 
-## 10. Chat (HO ↔ Store Manager)
+## 10. Chat (Head Office ↔ Store Manager)
 
 - Har order pe ek **Message** thread hai — dono taraf baat kar sakte hain.
-- **Store Manager:** My Orders me "Message HO".
-- **HO Manager:** Pending Approvals **aur** Custom Designs pe "Message".
-- Ye chat sirf HO aur Store Manager ke beech — **customer/manufacturer ko nahi dikhta**.
+- **Store Manager:** My Orders me "Message Head Office".
+- **Retailer (Head Office):** Pending Approvals **aur** Custom Designs pe "Message".
+- Ye chat sirf Head Office (Retailer) aur Store Manager ke beech — **customer/manufacturer ko nahi dikhta**.
 
 ---
 
@@ -264,14 +256,15 @@ design approve kar sakte hain.
 - My Orders me status dekhte raho; maal aane pe **Mark Completed**.
 - Custom chahiye to Custom Design form; stock kam to Restock (PIN se).
 
-**HO Manager (office me):**
+**Retailer / Head Office (office me):**
 - Pending Approvals roz check karo → note theek karo → **Approve** → manufacturer ko jaayega.
 - Store Managers ke sawaal chat pe jawab do.
+- Stores (branches), Store Managers, restock aur Retailer Profile bhi yahin se sambhalo.
 
 **Manufacturer (factory):**
 - Naye Retailer Registrations approve karo.
 - Kiosk/B2B/Custom orders dekho → status aage badhao (Confirmed → Packed → Shipped →
-  Delivered). HO address pe bhejo.
+  Delivered). Retailer ke Head Office address pe bhejo.
 - Catalog me naye design add karte raho.
 
 ---
@@ -282,8 +275,8 @@ design approve kar sakte hain.
   customer ko batata hai. System sirf design + order sambhalta hai.
 - **Customer ka naam/phone kaha jaata hai?** Kahin nahi (system me). Store Manager
   apne paas rakhta hai. System me sirf requirement note.
-- **Manufacturer maal kaha bhejta hai?** Hamesha Retailer ke fixed HO address pe.
-- **Store Manager account kaise bane?** Retailer/HO Manager `Stores (Branches)`
+- **Manufacturer maal kaha bhejta hai?** Hamesha Retailer ke fixed Head Office address pe.
+- **Store Manager account kaise bane?** Retailer `Stores (Branches)`
   page se banata hai.
 - **Login button ghoomta hi reh gaya?** Ab fix hai — galat password pe turant free
   ho jaata hai; sahi daalo.

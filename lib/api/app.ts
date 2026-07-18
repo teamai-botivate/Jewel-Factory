@@ -13,7 +13,6 @@ import { storeAuthRoutes } from './routes/store-auth';
 import { storePortalRoutes } from './routes/store-portal';
 import { storeCatalogRoutes } from './routes/store-catalog';
 import { storeOpsRoutes } from './routes/store-ops';
-import { managerAuthRoutes } from './routes/manager-auth';
 import { branchManagerRoutes } from './routes/branch-manager';
 import { kioskRoutes } from './routes/kiosk';
 
@@ -43,14 +42,11 @@ app.route('/manufacturer', manufacturerStoreRoutes);
 app.route('/manufacturer', manufacturerOrderRoutes);
 app.route('/manufacturer', manufacturerAiRoutes);
 
-// Store: auth (public) + portal (owner-only) + catalog/B2B (owner) + ops (owner|manager)
+// Store / Retailer: auth (public) + portal + catalog/B2B + ops (all owner-only)
 app.route('/store', storeAuthRoutes);
 app.route('/store', storePortalRoutes);
 app.route('/store', storeCatalogRoutes);
 app.route('/store', storeOpsRoutes);
-
-// Manager auth + operations
-app.route('/manager', managerAuthRoutes);
 
 // Store Manager (branch) — login + branch-scoped kiosk/restock (per-route guarded)
 app.route('/branch-manager', branchManagerRoutes);

@@ -36,7 +36,7 @@ export default function MyOrdersPage() {
     <div className="mx-auto w-full max-w-4xl px-4 py-6">
       <div className="mb-4">
         <h1 className="font-display text-2xl font-medium tracking-tight">My Orders</h1>
-        <p className="mt-0.5 text-sm text-muted-foreground">Orders you sent to Head Office — track status, message HO, and mark completed.</p>
+        <p className="mt-0.5 text-sm text-muted-foreground">Orders you sent to Head Office — track status, message Head Office, and mark completed.</p>
       </div>
       <div className="mb-5 flex gap-1 rounded-lg border bg-muted/30 p-1">
         {TABS.map((t) => (
@@ -50,7 +50,7 @@ export default function MyOrdersPage() {
 
 function statusOf(o: BaseOrder): { label: string; cls: string } {
   if (o.completedAt) return { label: 'Completed', cls: 'bg-green-100 text-green-800' };
-  if (o.pendingStoreApproval || o.pendingManagerApproval) return { label: 'Pending (HO)', cls: 'bg-yellow-100 text-yellow-800' };
+  if (o.pendingStoreApproval || o.pendingManagerApproval) return { label: 'Pending (Head Office)', cls: 'bg-yellow-100 text-yellow-800' };
   return { label: 'Approved', cls: 'bg-blue-100 text-blue-800' };
 }
 
@@ -129,7 +129,7 @@ function OrderList({ kind, endpoint }: { kind: Kind; endpoint: string }) {
                   ))}
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <Button size="sm" variant="outline" onClick={() => setChat(o.id)}><MessageCircle className="mr-1.5 h-4 w-4" />Message HO</Button>
+                  <Button size="sm" variant="outline" onClick={() => setChat(o.id)}><MessageCircle className="mr-1.5 h-4 w-4" />Message Head Office</Button>
                   {!o.completedAt && (
                     <Button size="sm" disabled={busy === o.id} onClick={() => complete(o.id)} className="metal-sheen text-[#17120b] font-semibold">
                       {busy === o.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Check className="mr-1.5 h-4 w-4" />Mark Completed</>}
@@ -183,9 +183,9 @@ function CustomList() {
       {filtered.map((r) => {
         // Store Manager does NOT see the manufacturer's granular status — that is HO-only.
         const st = r.completedAt ? { label: 'Completed', cls: 'bg-green-100 text-green-800' }
-          : r.status === 'PENDING' ? { label: 'Pending (HO)', cls: 'bg-yellow-100 text-yellow-800' }
+          : r.status === 'PENDING' ? { label: 'Pending (Head Office)', cls: 'bg-yellow-100 text-yellow-800' }
           : r.status === 'REJECTED' ? { label: 'Rejected', cls: 'bg-red-100 text-red-700' }
-          : { label: 'Approved by HO', cls: 'bg-blue-100 text-blue-800' };
+          : { label: 'Approved by Head Office', cls: 'bg-blue-100 text-blue-800' };
         return (
           <div key={r.id} className="rounded-xl border bg-card p-4">
             <div className="flex items-start justify-between gap-3">
@@ -203,7 +203,7 @@ function CustomList() {
             </div>
             {r.designNotes && <p className="mt-2 text-sm text-muted-foreground">{r.designNotes}</p>}
             <div className="mt-3 flex flex-wrap gap-2">
-              <Button size="sm" variant="outline" onClick={() => setChat(r.id)}><MessageCircle className="mr-1.5 h-4 w-4" />Message HO</Button>
+              <Button size="sm" variant="outline" onClick={() => setChat(r.id)}><MessageCircle className="mr-1.5 h-4 w-4" />Message Head Office</Button>
               {!r.completedAt && r.status !== 'REJECTED' && (
                 <Button size="sm" disabled={busy === r.id} onClick={() => complete(r.id)} className="metal-sheen text-[#17120b] font-semibold">
                   {busy === r.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Check className="mr-1.5 h-4 w-4" />Mark Completed</>}

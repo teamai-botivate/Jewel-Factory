@@ -163,7 +163,7 @@ pnpm dev            # http://localhost:3000
 2. **Retailer** → `/store/register` → manufacturer `/manufacturer/store-registrations` se **approve** kare.
 3. Retailer → `/store/login` → **Stores (Branches)** → ek Store (branch) + uska **Store Manager** banao (+ chaaho to restock PIN).
 4. **Store Manager** → `/store-manager/login` → kiosk / try-on / search / custom-design / restock / my-orders.
-5. **HO Manager** → `/store/manager/login` → Pending Approvals (branch orders approve + chat).
+5. Retailer (= Head Office) → `/store/login` → **Pending Approvals** (branch orders approve + chat).
 
 Poora role flow: `SYSTEM_FLOW.txt`.
 

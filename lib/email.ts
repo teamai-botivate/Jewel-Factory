@@ -85,16 +85,9 @@ export function storeApprovedEmail(opts: {
   managerEmails: string[];
   appUrl: string;
 }): { subject: string; html: string } {
-  const { storeName, storeSlug, ownerEmail, managerEmails, appUrl } = opts;
-  const managerRows =
-    managerEmails.length > 0
-      ? managerEmails
-          .map(
-            (e) =>
-              `<tr><td style="padding:4px 12px 4px 0;color:#6b6b6b;">Manager</td><td style="padding:4px 0;font-weight:600;">${e}</td></tr>`,
-          )
-          .join('')
-      : `<tr><td style="padding:4px 0;color:#6b6b6b;" colspan="2">No manager added yet — add one from Managers in your portal.</td></tr>`;
+  // managerEmails kept in the signature for callers, but the HO Manager role was
+  // removed — the Retailer/owner logs in and does everything.
+  const { storeName, storeSlug, ownerEmail, appUrl } = opts;
 
   return {
     subject: `Your store "${storeName}" is approved — Jewel Factory`,
@@ -108,17 +101,16 @@ export function storeApprovedEmail(opts: {
 
         <h3 style="color:#1F1A14;margin-top:24px;font-size:15px;">Login details</h3>
         <table style="font-size:14px;color:#1F1A14;">
-          <tr><td style="padding:4px 12px 4px 0;color:#6b6b6b;">Store Owner</td><td style="padding:4px 0;font-weight:600;">${ownerEmail}</td></tr>
-          ${managerRows}
+          <tr><td style="padding:4px 12px 4px 0;color:#6b6b6b;">Retailer</td><td style="padding:4px 0;font-weight:600;">${ownerEmail}</td></tr>
         </table>
         <p style="color:#8a8a8a;font-size:13px;margin-top:8px;">
-          Use the password you set during registration. Share the manager login with your store staff.
+          Use the password you set during registration. Add your Stores (branches) and
+          Store Managers from the portal.
         </p>
 
         <h3 style="color:#1F1A14;margin-top:24px;font-size:15px;">Quick links</h3>
         <p style="margin:12px 0;">
-          <a href="${appUrl}/store/login" style="background:#C29A33;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block;margin:0 8px 8px 0;">Store Owner Login</a>
-          <a href="${appUrl}/store/manager/login" style="background:#2E251F;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block;margin:0 8px 8px 0;">Manager Login</a>
+          <a href="${appUrl}/store/login" style="background:#C29A33;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block;margin:0 8px 8px 0;">Retailer Login</a>
         </p>
         <p style="color:#4b4b4b;font-size:14px;">
           Your in-store customer kiosk is live at:<br/>
@@ -126,9 +118,8 @@ export function storeApprovedEmail(opts: {
         </p>
 
         <p style="color:#8a8a8a;font-size:13px;margin-top:20px;">
-          Forgot a password? Reset it here:
-          <a href="${appUrl}/store/forgot-password" style="color:#C29A33;">Owner reset</a> ·
-          <a href="${appUrl}/store/manager/forgot-password" style="color:#C29A33;">Manager reset</a>
+          Forgot your password?
+          <a href="${appUrl}/store/forgot-password" style="color:#C29A33;">Reset it here</a>
         </p>
         <p style="color:#b0b0b0;font-size:11px;margin-top:20px;">Powered by Jewel Factory</p>
       </div>

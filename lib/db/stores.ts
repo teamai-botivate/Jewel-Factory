@@ -143,58 +143,7 @@ export function formatStoreAddress(store: {
     .join(', ');
 }
 
-// ── Manager management (owner only) ───────────────────────────────────────────
-
-export async function listManagers(storeId: string) {
-  return prisma.storeManager.findMany({
-    where: { storeId },
-    orderBy: { createdAt: 'desc' },
-    select: { id: true, name: true, email: true, phone: true, isActive: true, createdAt: true },
-  });
-}
-
-export async function createManager(
-  storeId: string,
-  input: { name: string; email: string; password: string; phone?: string },
-) {
-  const hash = await hashPassword(input.password);
-  return prisma.storeManager.create({
-    data: {
-      storeId,
-      name: input.name,
-      email: input.email.toLowerCase().trim(),
-      passwordHash: hash,
-      phone: input.phone ?? null,
-    },
-    select: { id: true, name: true, email: true, phone: true, isActive: true },
-  });
-}
-
-export async function updateManager(
-  storeId: string,
-  managerId: string,
-  input: { name?: string; phone?: string; isActive?: boolean },
-) {
-  const mgr = await prisma.storeManager.findFirst({ where: { id: managerId, storeId }, select: { id: true } });
-  if (!mgr) return null;
-  return prisma.storeManager.update({
-    where: { id: managerId },
-    data: input,
-    select: { id: true, name: true, email: true, phone: true, isActive: true },
-  });
-}
-
-export async function resetManagerPassword(storeId: string, managerId: string, newPassword: string) {
-  const mgr = await prisma.storeManager.findFirst({ where: { id: managerId, storeId }, select: { id: true } });
-  if (!mgr) return false;
-  const hash = await hashPassword(newPassword);
-  await prisma.storeManager.update({ where: { id: managerId }, data: { passwordHash: hash } });
-  return true;
-}
-
-export async function deleteManager(storeId: string, managerId: string) {
-  const mgr = await prisma.storeManager.findFirst({ where: { id: managerId, storeId }, select: { id: true } });
-  if (!mgr) return false;
-  await prisma.storeManager.delete({ where: { id: managerId } });
-  return true;
-}
+// ── HO Manager management REMOVED ─────────────────────────────────────────────
+// The HO Manager role was removed; the Retailer/owner now does all approvals.
+// The `store_managers` table + existing rows remain (referenced by historical
+// approvals) but there is no create/list/update/delete path any more.

@@ -44,8 +44,8 @@ Related docs: `HANDOVER.md` (client setup) · `DATABASE.md` (schema) ·
 - [ ] Manufacturer → "Generate with AI" (raw photo → name/desc + catalog + transparent, regenerate) — needs AI-Features deployed
 - [ ] Retailer → /store/branches → branch + store manager banao (+ restock PIN)
 - [ ] Store Manager → /store-manager → kiosk / try-on / search / custom / restock
-- [ ] Store Manager → My Orders → status + Mark Completed + Message HO
-- [ ] HO Manager → Pending Approvals → branch + editable note + approve + Message
+- [ ] Store Manager → My Orders → status + Mark Completed + Message Head Office
+- [ ] Retailer (Head Office) → Pending Approvals → branch + editable note + approve + Message
 - [ ] Manufacturer → order dikhe (retailer + branch + note, no customer PII)
 - [ ] Photo (visual) search — needs embedder/AI-Features + Qdrant
 

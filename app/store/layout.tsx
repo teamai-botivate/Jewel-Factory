@@ -11,9 +11,6 @@ const BARE = [
   '/store/register',
   '/store/forgot-password',
   '/store/reset-password',
-  '/store/manager/login',
-  '/store/manager/forgot-password',
-  '/store/manager/reset-password',
 ];
 
 export default function StoreRouteLayout({ children }: { children: ReactNode }) {

@@ -1,20 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { Store, Factory, ArrowRight, Users, Gem } from 'lucide-react';
+import { Store, Factory, ArrowRight, Gem } from 'lucide-react';
 
 const CARDS = [
   {
     href: '/store/login',
     icon: Store,
     title: 'Retailer Login',
-    subtitle: 'Manage stores, HO managers & branding',
-  },
-  {
-    href: '/store/manager/login',
-    icon: Users,
-    title: 'HO Manager Login',
-    subtitle: 'Approve orders & custom design requests',
+    subtitle: 'Approvals, stores, staff, restock & branding',
   },
   {
     href: '/store-manager/login',
