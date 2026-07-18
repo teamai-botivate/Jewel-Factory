@@ -136,7 +136,7 @@ pnpm migrate:branches               # Option-A: default "Main Store" branch per 
 1. `cp .env.example .env` — fill DATABASE_URL + DIRECT_URL (Supabase), secrets (min 32 chars: MANUFACTURER/STORE/MANAGER/**BRANCH_MANAGER**), Cloudinary, Qdrant, EMBEDDER_URL (+ optional AI_FEATURES_URL/AI_FEATURES_API_KEY for AI generate), SMTP. No `NEXT_PUBLIC_SUPABASE_*` — app uses Postgres directly, not Supabase Auth.
 2. `pnpm db:deploy` (runs all 5 migrations → full schema, no manual SQL) then `pnpm db:seed` (1 manufacturer + 14 categories).
 3. `pnpm dev`.
-**Handover / client onboarding: `HANDOVER.md` (zero-to-live). Schema: `DATABASE.md`. Flow: `SYSTEM_FLOW.txt`. Detailed setup: `SETUP_GUIDE.md`. Pending work / checklist: `PENDING.md`.**
+**Handover / client onboarding: `HANDOVER.md` (zero-to-live). Schema: `DATABASE.md`. Flow: `SYSTEM_FLOW.txt`. Detailed setup: `SETUP_GUIDE.md`. Pending work / checklist: `PENDING.md`. End-user (non-technical) guide with roles + demo login credentials + step-by-step workflows: `USER_MANUAL.md`.**
 
 ## Migrations (5, all Prisma-managed, idempotent)
 `0001 jewel_factory` · `kiosk_pin` · `b2b_item_image` · `branch_hierarchy` (branches + branch_managers + branch_id/requirement_note on orders + nullable PII) · `order_messages` (order_messages table + OrderKind/MessageSender enums + completed_at on kiosk/b2b/custom). `pnpm db:deploy` applies all. `migrate:categories`/`migrate:branches` = one-off upgrades for an EXISTING DB only.
