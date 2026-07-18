@@ -141,7 +141,7 @@ branchManagerRoutes.post('/search/image', branchManagerGuard, zValidator('json',
   if (ids.length === 0) return sendData(c, []);
   const products = await prisma.manufacturerProduct.findMany({
     where: { id: { in: ids }, status: 'ACTIVE' },
-    include: { images: { orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }], take: 1 } },
+    include: { images: { orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }] } },
   });
   const byId = new Map(products.map((p) => [p.id, p]));
   return sendData(c, ids.map((id) => byId.get(id)).filter(Boolean));
