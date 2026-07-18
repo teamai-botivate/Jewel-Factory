@@ -8,16 +8,16 @@ Related docs: `HANDOVER.md` (client setup) · `DATABASE.md` (schema) ·
 
 ---
 
-## 1. AI-Features service deploy  (repo: github.com/teamai-botivate/Jewel-Factory_AI)
-- [ ] HuggingFace **Docker Space** banao, `Jewel-Factory_AI` repo se deploy
-- [ ] Space → Variables: `OPENAI_API_KEY` (zaroori), `EMBEDDER_API_KEY` (agar Bearer chahiye), `AI_FEATURES_API_KEY` (agar x-api-key chahiye)
-- [ ] URL note karo + `GET <URL>/health` → `{"ok":true,"openai":true}` verify
+## 1. AI-Features service deploy  (repo: github.com/teamai-botivate/Jewel-Factory_AI; local `../AI-Features`)
+- [x] HuggingFace **Docker Space** deployed → `Botivate2026/ai-workspace` (URL `https://botivate2026-ai-workspace.hf.space`)
+- [x] `GET <URL>/health` → `{"ok":true,"service":"ai-features","openai":true}` verified
+- [ ] **BLOCKER: OpenAI quota** — `/describe`, `/catalog`, `/transparent` return `429 insufficient_quota` (HF wraps it as 502). **Add OpenAI billing/credit** (platform.openai.com/account/billing) OR set a funded key in Space → Variables → `OPENAI_API_KEY` + restart Space. Nothing to change in the app.
+- [ ] After credit: regenerate a necklace/bangle transparent PNG to confirm the new front-only prompt (open U/V, no back chain).
+- Note: `AI_FEATURES_API_KEY` NOT set on the Space → keep it unset on Render too (empty = OK, no x-api-key sent).
 
-## 2. Render env update (AI-Features deploy ke baad)
-- [ ] `EMBEDDER_URL` = AI-Features Space URL (embedder ab isme merged; /embed/image same)
-- [ ] `AI_FEATURES_URL` = same URL (add)
-- [ ] `AI_FEATURES_API_KEY` + `EMBEDDER_API_KEY` = jo Space pe set kiye
-- [ ] Save → redeploy
+## 2. Render env update (done — verify only)
+- [x] `AI_FEATURES_URL` set (the AI "Generate with AI" panel shows → env is present). **Must be lowercase host** (capital → 307 body-drop → 502).
+- [ ] `EMBEDDER_URL` = same AI-Features URL (embedder merged; `/embed/image` same) — verify set.
 - [ ] Purana embedder Space (botivate2026-embedder) retire/pause — optional
 
 ## 3. Branch → master merge (handover se pehle)

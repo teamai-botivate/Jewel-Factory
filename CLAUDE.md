@@ -150,6 +150,16 @@ full LuxeMatch-style storefront (hero/catalog/try-on/search/custom/restock) + My
 **Live DB (Supabase) has all 5 migrations applied** (branch_hierarchy + order_messages done;
 `migrate:branches` run once). `master` stays at the pre-hierarchy state — **merge `retailer-multistore` → `master` when handing over.**
 
+**Latest session (all on `retailer-multistore`):**
+- **AI Add Design** — manufacturer "Generate with AI" (raw photo → name/description + catalog image + transparent try-on PNG via AI-Features); field order = specs → AI panel → name → rest; new products default **Active**; generated catalog/try-on images click-to-zoom (lightbox). Race-lock on `ensureProductId` (no double product). AI proxy lowercases the HF host (307 body-drop → 502 fix) and surfaces the real upstream error. **AI-Features (`../AI-Features`, HF Space `Botivate2026/ai-workspace`) currently returns OpenAI `429 insufficient_quota` → add OpenAI credit to make generation work.**
+- **Transparent try-on prompt** (AI-Features `lib/prompts.py`) — necklace + bangle now render FRONT drape only (open U/V, no back chain/clasp) so 2D overlay sits correctly; regenerate old assets after HF redeploy.
+- **Store Manager kiosk + search** — product cards open a detail modal (gallery, specs, description, **Try On** when AR, **Similar designs**); modal image click-to-zoom; close X at card top-right; Try-On page reads `?product=` (auto-select) + `?back=` (Back button to originating page).
+- **Login fix** — `StaffLoginForm` resets loading on a server error (wrong creds no longer freeze the button). Affects all 4 logins.
+- **HO ↔ Store Manager chat** added on the HO custom-designs page (was only on pending-approvals). Store Manager no longer sees the manufacturer's granular status ("Approved by HO" only).
+- **Nav** — removed "Kiosk PIN" from the Retailer/HO sidebar (managed per-Store on Branches); "Stores (Branches)" now visible to the **HO Manager** too; "Store Profile" → "**Retailer Profile**".
+- **Order filters (all lists)** — reusable `components/orders/OrderFilters.tsx` + `lib/order-filters.ts`: order-ID search + status dropdown everywhere; **Store (branch) filter** on HO lists (kiosk/custom/b2b) with a branch badge per row; **Retailer filter** on Manufacturer lists (kiosk/custom/orders); Store Manager My Orders searches by order-ID + derived status bucket. HO custom list gained `branch{name}` via `listCustomRequests`.
+- **Portal** — "JEWEL FACTORY" text wordmark (was the stale LuxeMatch logo image).
+
 ## Gotchas
 
 - Catch-all route MUST export every method incl. **PUT** (password resets use PUT). The old LuxeMatch app 405'd because PUT was missing.
@@ -170,3 +180,6 @@ full LuxeMatch-style storefront (hero/catalog/try-on/search/custom/restock) + My
 - **`order_messages` is polymorphic** (`orderKind` + `orderId`, no FK) so one table serves kiosk/b2b/custom chat. Always query it scoped by `storeId`. `OrderChat.tsx` is shared — pass `viewer` ('HO' | 'STORE_MANAGER') and the right `basePath`.
 - **`completedAt` is a flag, not a status** — set by the Store Manager via `markKiosk/B2b/CustomCompleted(branchId, id)`. Doesn't touch the approval status enum (avoids clashing with the existing flow).
 - **Store Manager storefront images must be gold** (gold-only business). Try-On banner pulls a real catalog piece, not a stock photo; hero background is a gold showroom. Don't reintroduce blue/diamond stock imagery.
+- **Order filters are CLIENT-SIDE.** `OrderFilters` (search + status + group dropdown) + `lib/order-filters.ts` (`matchOrder`, `uniqueBranchOptions`, `*_STATUS_OPTIONS`). Pages fetch all orders then filter in a `useMemo`. The "group" dropdown is generic: HO passes the **branch** name (`branchNameSnapshot`), Manufacturer passes the **retailer** name (`storeNameSnapshot`/`storeName`) into `matchOrder`'s `branchName`. If you paginate/switch to server-side, move this into the API query params instead. Store Manager filters on a DERIVED bucket (`bucketOf`/`customBucketOf`), not the raw enum (it never shows manufacturer status).
+- **Login handler must reset loading on error.** `StaffLoginForm.submit` sets `setLoading(false)` before the error `return`; only the success path (which `window.location.assign`s away) leaves it true. Don't remove it or wrong creds freeze the button again.
+- **AI generation runs on OpenAI** (via AI-Features). A `502` on `/api/manufacturer/ai/*` usually wraps an OpenAI `429 insufficient_quota` — check OpenAI billing, not the app. HF Space `AI_FEATURES_URL` must be **lowercase** (capital host 307-redirects and drops the POST body).

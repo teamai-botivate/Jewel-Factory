@@ -117,9 +117,23 @@
   PER-ORDER CHAT (HO Manager <-> Store Manager):
      - Every order has a "Message" thread. Both sides can send messages.
      - Store Manager: "Message HO" on My Orders — follow up as many times as needed.
-     - HO Manager: "Message" button on Pending Approvals — reply / give updates.
+     - HO Manager: "Message" on Pending Approvals AND on Custom Designs — reply / give updates.
      - Messages travel only between HO and the Store Manager (no customer, no
        manufacturer). Stored in `order_messages`, scoped to the retailer.
+
+  STATUS VISIBILITY: the Store Manager sees only Pending / Approved by HO /
+  Rejected / Completed — NOT the manufacturer's granular status. The full
+  manufacturer status (CD-xxxx + confirmed/shipped/tracking) is HO-only, on the
+  HO Custom Designs page.
+
+  SEARCH + FILTERS (all order lists — client-side):
+     - Store Manager My Orders: search by order ID; filter by status bucket.
+     - HO Manager (Kiosk / Custom / Restock): search by order ID; filter by
+       status; filter by STORE (branch) — each row shows a branch badge.
+     - Manufacturer (Kiosk / Custom / B2B Orders): search by order ID; filter by
+       status; filter by RETAILER (store).
+     - HO order detail shows which Branch it came from; Manufacturer order detail
+       shows which Retailer it came from.
 
   So the loop is: Store Manager sends -> HO approves (+ can chat) -> manufacturer
   fulfils -> piece reaches customer -> Store Manager marks Completed. HO and Store
