@@ -23,8 +23,8 @@ const NAV = [
   { label: 'B2B Orders', href: '/manufacturer/orders', icon: ShoppingBag },
   { label: 'Kiosk Orders', href: '/manufacturer/kiosk-orders', icon: Users },
   { label: 'Custom Designs', href: '/manufacturer/custom-designs', icon: PencilLine },
-  { label: 'Stores', href: '/manufacturer/stores', icon: StoreIcon },
-  { label: 'Store Registrations', href: '/manufacturer/store-registrations', icon: ClipboardCheck },
+  { label: 'Retailers', href: '/manufacturer/stores', icon: StoreIcon },
+  { label: 'Retailer Registrations', href: '/manufacturer/store-registrations', icon: ClipboardCheck },
 ];
 
 export default function ManufacturerLayout({ children }: { children: ReactNode }) {

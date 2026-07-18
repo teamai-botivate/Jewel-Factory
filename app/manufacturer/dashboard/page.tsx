@@ -68,7 +68,7 @@ export default function ManufacturerDashboardPage() {
     <div className="mx-auto w-full max-w-5xl space-y-5">
       <div>
         <h1 className="text-2xl font-medium tracking-tight">Dashboard</h1>
-        <p className="mt-0.5 text-sm text-muted-foreground">Overview of your catalog, orders and stores.</p>
+        <p className="mt-0.5 text-sm text-muted-foreground">Overview of your catalog, orders and retailers.</p>
       </div>
 
       {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
@@ -87,7 +87,7 @@ export default function ManufacturerDashboardPage() {
             <Stat label="B2B Pending" value={data.pendingB2b} icon={ShoppingBag} href="/manufacturer/orders" />
             <Stat label="Kiosk Pending" value={data.pendingKiosk} icon={Users} href="/manufacturer/kiosk-orders" />
             <Stat label="Approvals" value={data.pendingRegistrations} icon={ClipboardCheck} href="/manufacturer/store-registrations" />
-            <Stat label="Active Stores" value={data.activeStores} icon={StoreIcon} href="/manufacturer/stores" />
+            <Stat label="Active Retailers" value={data.activeStores} icon={StoreIcon} href="/manufacturer/stores" />
           </div>
 
           <div className="rounded-xl border bg-card overflow-hidden">

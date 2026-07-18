@@ -19,7 +19,7 @@ export default function ManufacturerStoresPage() {
     void reload();
   }
   async function remove(s: Store) {
-    if (!confirm(`Delete store "${s.name}"? This cannot be undone.`)) return;
+    if (!confirm(`Delete retailer "${s.name}"? This cannot be undone.`)) return;
     await apiSend('DELETE', `/api/manufacturer/stores/${s.id}`);
     void reload();
   }
@@ -27,8 +27,8 @@ export default function ManufacturerStoresPage() {
   return (
     <div className="mx-auto w-full max-w-4xl space-y-4">
       <div>
-        <h1 className="text-2xl font-medium tracking-tight">Stores</h1>
-        <p className="mt-0.5 text-sm text-muted-foreground">Manage approved stores.</p>
+        <h1 className="text-2xl font-medium tracking-tight">Retailers</h1>
+        <p className="mt-0.5 text-sm text-muted-foreground">Manage approved retailers.</p>
       </div>
       {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
       {loading && <div className="flex items-center gap-2 py-12 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>}
