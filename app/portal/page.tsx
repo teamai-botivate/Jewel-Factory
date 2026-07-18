@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
 import { Store, Factory, ArrowRight, Users, Gem } from 'lucide-react';
 
 const CARDS = [
@@ -35,14 +34,9 @@ export default function PortalPage() {
   return (
     <div className="min-h-screen bg-[#0f0d0a] flex flex-col items-center justify-center px-4">
       <div className="mb-10 flex flex-col items-center gap-3">
-        <Image
-          src="/logo-wordmark.png"
-          alt="Jewel Factory"
-          width={160}
-          height={32}
-          className="h-8 w-auto object-contain brightness-0 invert opacity-80"
-          priority
-        />
+        <h1 className="font-display text-3xl font-medium tracking-[0.2em] text-[#f0e6d0]">
+          JEWEL <span className="text-[#c9a84c]">FACTORY</span>
+        </h1>
         <p className="text-xs tracking-widest text-[#6b5e45] uppercase">Staff Portal</p>
       </div>
 
