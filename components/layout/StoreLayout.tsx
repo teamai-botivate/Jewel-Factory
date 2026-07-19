@@ -44,7 +44,7 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
 
   async function signOut() {
     await fetch('/api/store/logout', { method: 'POST' });
-    router.push('/portal');
+    router.push('/');
   }
 
   const items = NAV;

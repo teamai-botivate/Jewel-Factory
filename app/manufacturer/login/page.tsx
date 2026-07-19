@@ -9,7 +9,7 @@ export default function ManufacturerLoginPage() {
       subtitle="Admin panel — catalog, stores & orders."
       loginPath="/api/manufacturer/login"
       redirectTo="/manufacturer/dashboard"
-      footerLinks={[{ prompt: 'Not the manufacturer?', label: 'Staff portal', href: '/portal' }]}
+      footerLinks={[{ prompt: 'Not the manufacturer?', label: 'Back to home', href: '/' }]}
     />
   );
 }

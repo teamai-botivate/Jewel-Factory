@@ -17,6 +17,7 @@ export function StaffLoginForm({
   brandWordmark = true,
   footerLinks = [],
   forgotHref,
+  bare = false,
 }: {
   title: string;
   subtitle: string;
@@ -25,6 +26,9 @@ export function StaffLoginForm({
   brandWordmark?: boolean;
   footerLinks?: FooterLink[];
   forgotHref?: string;
+  // bare = render just the form (no full-screen wrapper/background) so it can be
+  // embedded inside a modal (e.g. the landing-page login popup).
+  bare?: boolean;
 }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -66,21 +70,22 @@ export function StaffLoginForm({
     }
   }
 
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-3 py-10">
+  const form = (
       <form
         onSubmit={submit}
-        className="w-full max-w-sm space-y-5 rounded-2xl border bg-card p-8 shadow-sm"
+        className={bare ? 'w-full space-y-4' : 'w-full max-w-sm space-y-5 rounded-2xl border bg-card p-8 shadow-sm'}
       >
-        <div className="text-center">
-          {brandWordmark && (
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-              <span className="text-[#C9A84C]">Jewel</span> Factory
-            </p>
-          )}
-          <h1 className="mt-2 text-2xl font-medium tracking-tight">{title}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>
-        </div>
+        {(brandWordmark || title || subtitle) && (
+          <div className="text-center">
+            {brandWordmark && (
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                <span className="text-[#C9A84C]">Jewel</span> Factory
+              </p>
+            )}
+            {title && <h1 className="mt-2 text-2xl font-medium tracking-tight">{title}</h1>}
+            {subtitle && <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>}
+          </div>
+        )}
 
         <div className="space-y-3">
           <Input
@@ -136,6 +141,12 @@ export function StaffLoginForm({
           </p>
         ))}
       </form>
+  );
+
+  if (bare) return form;
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background px-3 py-10">
+      {form}
     </div>
   );
 }
