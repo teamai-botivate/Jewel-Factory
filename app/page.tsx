@@ -6,9 +6,13 @@ import { useEffect, useState } from 'react';
 
 import { LoginModal } from '@/components/landing/LoginModal';
 import { RegisterPromptModal } from '@/components/landing/RegisterPromptModal';
+import { titleCaseName, formatWeight } from '@/lib/format';
 
 type ShowcaseProduct = {
-  id: string; name: string; category: string | null; hasTryon: boolean;
+  id: string; designNumber?: string; name: string;
+  category: string | null; subCategory?: string | null;
+  purity?: string | null; weightGrams?: string | null; description?: string | null;
+  hasTryon: boolean;
   images: { secureUrl: string; isPrimary: boolean }[];
 };
 
@@ -24,6 +28,9 @@ export default function LandingPage() {
   const [showcase, setShowcase] = useState<ShowcaseProduct[] | null>(null);
   const [showLogin, setShowLogin] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [detail, setDetail] = useState<ShowcaseProduct | null>(null);
+  const [detailImg, setDetailImg] = useState(0);
+  const [zoom, setZoom] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -118,7 +125,7 @@ export default function LandingPage() {
               {showcase.map((p) => {
                 const img = p.images.find((i) => i.isPrimary) ?? p.images[0];
                 return (
-                  <div key={p.id} className="group overflow-hidden rounded-xl border bg-card">
+                  <button key={p.id} type="button" onClick={() => { setDetail(p); setDetailImg(0); }} className="group overflow-hidden rounded-xl border bg-card text-left transition-shadow hover:shadow-md" title="View details">
                     <div className="relative aspect-[3/4] bg-[#ece5da]">
                       {img ? (
                         // eslint-disable-next-line @next/next/no-img-element
@@ -131,10 +138,10 @@ export default function LandingPage() {
                       )}
                     </div>
                     <div className="p-3">
-                      <p className="truncate text-sm font-medium">{p.name}</p>
+                      <p className="truncate text-sm font-medium group-hover:text-primary">{p.name}</p>
                       {p.category && <p className="truncate text-xs text-muted-foreground">{p.category}</p>}
                     </div>
-                  </div>
+                  </button>
                 );
               })}
             </div>
@@ -186,6 +193,69 @@ export default function LandingPage() {
           <p className="mt-2 text-xs text-muted-foreground">Powered by Jewel Factory</p>
         </div>
       </footer>
+
+      {/* Product detail modal (public — ends with a Register/Login CTA) */}
+      {detail && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 py-8" onClick={() => setDetail(null)}>
+          <div className="relative w-full max-w-3xl rounded-2xl bg-card shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <button onClick={() => setDetail(null)} aria-label="Close" className="absolute right-3 top-3 z-20 rounded-full bg-black/60 p-1.5 text-white hover:bg-black/80"><X className="h-4 w-4" /></button>
+            <div className="grid md:grid-cols-2">
+              {/* Gallery */}
+              <div className="bg-[#ece5da] p-4 md:rounded-l-2xl">
+                <div className="aspect-square overflow-hidden rounded-xl bg-white">
+                  {detail.images[detailImg] ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={detail.images[detailImg].secureUrl} alt={detail.name} onClick={() => setZoom(detail.images[detailImg].secureUrl)} className="h-full w-full cursor-zoom-in object-contain" title="Click to enlarge" />
+                  ) : <div className="flex h-full items-center justify-center text-muted-foreground/40"><Gem className="h-10 w-10" /></div>}
+                </div>
+                {detail.images.length > 1 && (
+                  <div className="mt-3 flex gap-2 overflow-x-auto">
+                    {detail.images.map((im, i) => (
+                      <button key={i} onClick={() => setDetailImg(i)} className={`h-14 w-14 flex-shrink-0 overflow-hidden rounded-lg border-2 ${i === detailImg ? 'border-primary' : 'border-transparent'}`}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={im.secureUrl} alt="" className="h-full w-full object-cover" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {/* Info */}
+              <div className="space-y-4 p-6">
+                <div className="pr-8">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-primary">{detail.category ?? 'Jewellery'}{detail.subCategory ? ` · ${detail.subCategory}` : ''}</p>
+                  <h2 className="mt-1 font-display text-2xl font-medium">{titleCaseName(detail.name)}</h2>
+                  {detail.designNumber && <p className="mt-0.5 text-sm text-muted-foreground">Design {detail.designNumber}</p>}
+                </div>
+                <div className="overflow-hidden rounded-xl border text-sm">
+                  <div className="flex justify-between px-4 py-2.5"><span className="text-muted-foreground">Metal</span><span className="font-medium">Gold</span></div>
+                  {detail.purity && <div className="flex justify-between bg-muted/40 px-4 py-2.5"><span className="text-muted-foreground">Purity</span><span className="font-medium">{detail.purity}</span></div>}
+                  {formatWeight(detail.weightGrams) && <div className="flex justify-between px-4 py-2.5"><span className="text-muted-foreground">Weight</span><span className="font-medium">{formatWeight(detail.weightGrams)}</span></div>}
+                  <div className="flex justify-between bg-muted/40 px-4 py-2.5"><span className="text-muted-foreground">Category</span><span className="font-medium">{detail.category ?? '—'}{detail.subCategory ? ` › ${detail.subCategory}` : ''}</span></div>
+                </div>
+                {detail.description && detail.description.trim().length >= 4 && (
+                  <p className="text-sm leading-relaxed text-muted-foreground">{detail.description}</p>
+                )}
+                <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-center">
+                  <p className="text-sm text-muted-foreground">Register or sign in to order this design and browse the full catalog.</p>
+                  <div className="mt-3 flex flex-wrap justify-center gap-2">
+                    <Link href="/store/register" className="metal-sheen inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-[#17120b]">Register here</Link>
+                    <button onClick={() => { setDetail(null); setShowLogin(true); }} className="inline-flex items-center gap-2 rounded-full border border-primary/40 px-5 py-2.5 text-sm font-semibold text-primary hover:bg-primary/5">Login</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Full-screen image zoom */}
+      {zoom && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-6" onClick={() => setZoom(null)} role="dialog" aria-modal="true">
+          <button type="button" onClick={() => setZoom(null)} aria-label="Close" className="absolute right-4 top-4 rounded-full bg-white/15 p-2 text-white hover:bg-white/25"><X className="h-5 w-5" /></button>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={zoom} alt="preview" onClick={(e) => e.stopPropagation()} className="max-h-[85vh] max-w-[85vw] rounded-lg object-contain" />
+        </div>
+      )}
 
       {showLogin && <LoginModal onClose={() => setShowLogin(false)} />}
       <RegisterPromptModal />
