@@ -1,4 +1,4 @@
-import { ArrowLeft, Gem, ShieldCheck, Sparkles, Building2, Factory, Store, Users } from 'lucide-react';
+import { ArrowLeft, Gem, ShieldCheck, Sparkles, Building2, Factory, Store, Users, Search } from 'lucide-react';
 import Link from 'next/link';
 
 export const metadata = { title: 'About — Jewel Factory' };
@@ -14,6 +14,7 @@ const PRINCIPLES = [
   { icon: Gem, title: 'No price anywhere', desc: 'Gold rates change daily, so the platform never shows a price. The store quotes the customer directly.' },
   { icon: ShieldCheck, title: 'Customer privacy by design', desc: 'Orders carry only products + an editable requirement note. Customer name and phone never reach the manufacturer.' },
   { icon: Sparkles, title: 'AR try-on', desc: 'Every eligible design has a transparent asset so it can be tried on live at the store kiosk.' },
+  { icon: Search, title: 'Similar-design search', desc: 'Upload a photo at the kiosk to instantly find matching designs in the catalog by visual similarity.' },
   { icon: Building2, title: 'One retailer, many stores', desc: 'Approvals, restock and custom orders are tracked across every branch, end to end.' },
 ];
 

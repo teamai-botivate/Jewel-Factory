@@ -1,7 +1,6 @@
 import type { Landmark } from './landmarkSmoother';
 
-// The 6 jewellery types LuxeMatch supports. Matches the
-// product_tryon_assets.jewellery_type enum in supabase/migrations/0001_init.sql.
+// The 6 jewellery types Jewel Factory supports for AR try-on.
 export type JewelleryType =
   | 'necklace'
   | 'earring_left'

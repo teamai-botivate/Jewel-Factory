@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowRight, Gem, Sparkles, ShieldCheck, Building2, Menu, X } from 'lucide-react';
+import { ArrowRight, Gem, Sparkles, ShieldCheck, Building2, Search, Menu, X } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
@@ -14,8 +14,9 @@ type ShowcaseProduct = {
 
 const FEATURES = [
   { icon: Gem, title: 'Gold-only catalog', desc: 'One manufacturer catalog, auto design numbers, no price clutter — quotes stay with the store.' },
-  { icon: ShieldCheck, title: 'Customer privacy', desc: 'Walk-in customer details never leave the store — the manufacturer only sees products.' },
   { icon: Sparkles, title: 'AR virtual try-on', desc: 'Customers see how a piece looks on them, right at the store kiosk.' },
+  { icon: Search, title: 'Similar-design search', desc: 'Upload a photo and instantly find matching designs in the catalog by visual similarity.' },
+  { icon: ShieldCheck, title: 'Customer privacy', desc: 'Walk-in customer details never leave the store — the manufacturer only sees products.' },
   { icon: Building2, title: 'Multi-store ready', desc: 'One retailer, many stores — approvals, restock and orders tracked end to end.' },
 ];
 
@@ -155,7 +156,7 @@ export default function LandingPage() {
             <p className="text-xs font-semibold uppercase tracking-widest text-[#a0824a]">Why Jewel Factory</p>
             <h2 className="mt-2 font-display text-3xl font-normal tracking-tight">Built for gold jewellery, end to end</h2>
           </div>
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             {FEATURES.map(({ icon: Icon, title, desc }) => (
               <div key={title} className="rounded-xl border bg-card p-5">
                 <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">

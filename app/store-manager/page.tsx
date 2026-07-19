@@ -46,7 +46,7 @@ export default function StoreManagerHome() {
 
   return (
     <div className="space-y-14 pb-4">
-      {/* ── LuxeMatch-style hero ───────────────────────────────────────────── */}
+      {/* ── Storefront hero ────────────────────────────────────────────────── */}
       <section className="relative w-full min-h-[calc(100svh-160px)] overflow-hidden bg-[#211711]">
         {/* Faded showroom backdrop */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
