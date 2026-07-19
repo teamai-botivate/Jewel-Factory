@@ -1,0 +1,58 @@
+================================================================================
+  FIRST PROMPT — naye laptop / naye Claude ko sabse pehle ye copy-paste karo
+================================================================================
+
+Neeche wale poore text ko copy karke Claude Code ke pehle message me paste kar do.
+(Isse naya Claude project ki poori history + context padh lega, aur phir tum
+waise hi baat kar paoge jaise pehle karte the.)
+
+--------------------------------------------------------------------------------
+COPY FROM HERE  ↓↓↓
+--------------------------------------------------------------------------------
+
+Tum is "Jewel Factory" project pe kaam karne wale Claude Code agent ho. Mai isi
+project ka owner hoon. Tumhe is project ke baare me abhi kuch nahi pata, isliye
+kaam shuru karne se PEHLE ye files padho (isi order me), taaki tumhe poora context
+mil jaaye:
+
+1. CLAUDE.md            (repo root) — technical guidance, architecture, gotchas
+2. docs/PROJECT_HISTORY.md          — poora backstory: kya bana, kyun bana, kya
+                                      pending hai, aur mai kaise kaam karwata hoon
+3. docs/flow.md                     — poore system ka flow (kaun kaun hai, order
+                                      kaise chalta hai, approvals, chat, sab)
+
+Ye 3 padhne ke baad mujhe SHORT me batao ki tumne kya samjha:
+  - Ye system kya hai (1-2 line)
+  - Kaunsi branch pe kaam hota hai
+  - 2 hard rules kya hain
+  - Abhi kya-kya pending hai
+Phir ruk jao aur mera agla instruction ka wait karo. Abhi koi code mat badalna.
+
+Kaam karne ka tarika (ye yaad rakhna, PROJECT_HISTORY me bhi likha hai):
+  - Hinglish (Hindi-English) me baat karo, simple aur clear.
+  - Jab tak mai "start / do / haan" na bolu, code MAT badalna — pehle apna
+    understanding + plan batao, phir confirm lo.
+  - Har finished change ke baad: pehle `pnpm typecheck` (aur naye page/structural
+    change pe `pnpm build`) chalao — dono pass hone chahiye — phir commit + push
+    karo (branch: retailer-multistore). Commit message ke end me
+    "Co-Authored-By: Claude ..." trailer lagana (git log me exact format dekh lo).
+  - Trade-offs samjhao, phir ek option recommend karo — final decision mai lunga.
+  - 2 hard rules kabhi mat todna: (1) koi price kahin nahi dikhti, (2) customer ki
+    personal detail manufacturer tak kabhi nahi jaati / store nahi hoti.
+
+Setup ke liye (agar abhi tak nahi hua): fresh clone pe `git checkout
+retailer-multistore` → `pnpm install` → `cp .env.example .env` (docs/HANDOVER.md
+follow karke bharo; leaked secrets rotate karke) → `pnpm db:deploy && pnpm db:seed`
+→ `pnpm dev`.
+
+--------------------------------------------------------------------------------
+COPY UP TO HERE  ↑↑↑
+--------------------------------------------------------------------------------
+
+TIP: agar naya Claude context poora na pakde, to bas bolo:
+  "docs/PROJECT_HISTORY.md aur CLAUDE.md dhyaan se padho, phir batao kya samjha."
+
+AI service (agar AI feature pe kaam karna ho) alag repo hai:
+  github.com/teamai-botivate/Jewel-Factory_AI  (local ../AI-Features) — usme bhi
+  apna CLAUDE.md hai.
+================================================================================

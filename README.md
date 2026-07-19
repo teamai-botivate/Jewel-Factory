@@ -82,6 +82,7 @@ pnpm migrate:branches   # one-off: back-fill a default branch for an existing DB
 
 ## Docs (in `docs/`)
 
+- **[docs/FIRST_PROMPT.txt](docs/FIRST_PROMPT.txt)** — on a new machine, paste this as the first message to a fresh Claude Code agent
 - **[docs/PROJECT_HISTORY.md](docs/PROJECT_HISTORY.md)** — full backstory, decisions & owner preferences (new machine/agent: read first)
 - **[docs/flow.md](docs/flow.md)** — complete system flow (start here)
 - **[docs/USER_MANUAL.md](docs/USER_MANUAL.md)** — non-technical staff guide + demo credentials
