@@ -23,9 +23,8 @@ export default function AboutPage() {
     <div className="min-h-screen">
       <header className="sticky top-0 z-40 border-b border-black/5 bg-background/85 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-4xl items-center justify-between px-4 sm:px-6">
-          <Link href="/" className="flex items-center gap-2">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo-wordmark.png" alt="Jewel Factory" className="h-7 w-auto object-contain" />
+          <Link href="/" className="font-display text-xl font-medium tracking-[0.15em] text-foreground">
+            JEWEL <span className="text-[#c9a84c]">FACTORY</span>
           </Link>
           <Link href="/" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-4 w-4" /> Home

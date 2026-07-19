@@ -174,7 +174,7 @@ full LuxeMatch-style storefront (hero/catalog/try-on/search/custom/restock) + My
 - **HO ↔ Store Manager chat** added on the HO custom-designs page (was only on pending-approvals). Store Manager no longer sees the manufacturer's granular status ("Approved by HO" only).
 - **Nav** — removed "Kiosk PIN" from the Retailer sidebar (managed per-Store on Branches); "Store Profile" → "**Retailer Profile**". (The old HO Manager sidebar is gone — the Retailer/Head Office has the full menu.)
 - **Order filters (all lists)** — reusable `components/orders/OrderFilters.tsx` + `lib/order-filters.ts`: order-ID search + status dropdown + **From/To date range** (on `createdAt`) everywhere; **Store (branch) filter** on HO lists (kiosk/custom/b2b) with a branch badge per row; **Retailer filter** on Manufacturer lists (kiosk/custom/orders); Store Manager My Orders searches by order-ID + derived status bucket + date range. HO custom list gained `branch{name}` via `listCustomRequests`.
-- **Portal** — "JEWEL FACTORY" text wordmark (was the stale LuxeMatch logo image).
+- **Wordmark** — landing + About navbars use a **"JEWEL FACTORY" text wordmark** (`FACTORY` in gold `#c9a84c`), NOT `public/logo-wordmark.png` — that PNG still shows "LUXEMATCH", so don't use it. Favicon is `public/logo-icon.png`.
 
 ## Gotchas
 
