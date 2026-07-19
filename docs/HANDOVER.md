@@ -3,8 +3,8 @@
 Ye guide **naye owner/client** ke liye hai — apne khud ke accounts par poora system
 zero se live karne ke liye. Isko top-se-bottom follow karo. Koi step chhodna mat.
 
-> Roles / flow samajhne ke liye pehle `SYSTEM_FLOW.txt` padho. Database samajhne ke
-> liye `DATABASE.md`. Technical detail `CLAUDE.md` me hai. Ye file = **setup + handover**.
+> Roles / flow samajhne ke liye pehle `flow.md` padho. Database samajhne ke
+> liye `DATABASE.md`. Technical detail `../CLAUDE.md` me hai. Ye file = **setup + handover**.
 > **Non-technical end users ke liye `USER_MANUAL.md`** (roles + demo login credentials
 > + step-by-step kaam) — ye woh file hai jo staff ko dena hai.
 
@@ -165,7 +165,7 @@ pnpm dev            # http://localhost:3000
 4. **Store Manager** → `/store-manager/login` → kiosk / try-on / search / custom-design / restock / my-orders.
 5. Retailer (= Head Office) → `/store/login` → **Pending Approvals** (branch orders approve + chat).
 
-Poora role flow: `SYSTEM_FLOW.txt`.
+Poora role flow: `flow.md`.
 
 ---
 
@@ -197,7 +197,7 @@ Detailed Render steps: `DEPLOY_RENDER.md`.
 ## 10. Handover — client ko ye do
 
 - [ ] GitHub repo access (ya code zip)
-- [ ] Ye 5 files: `HANDOVER.md`, `DATABASE.md`, `SYSTEM_FLOW.txt`, `SETUP_GUIDE.md`, `USER_MANUAL.md` (staff ko dene ke liye)
+- [ ] Ye 5 files: `HANDOVER.md`, `DATABASE.md`, `flow.md`, `SETUP_GUIDE.md`, `USER_MANUAL.md` (staff ko dene ke liye)
 - [ ] Client apne accounts banaye (Supabase/Cloudinary/Qdrant/SMTP/Render) — step 1–5
 - [ ] Client apna `.env` bhare (uske accounts ki values)
 - [ ] `pnpm db:deploy` + `pnpm db:seed` (uski DB pe)

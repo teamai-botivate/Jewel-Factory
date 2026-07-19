@@ -12,7 +12,7 @@ Same features, same UI, zero dead code. Built phase-by-phase from
 Tailwind v4 (CSS-first, no config file) + shadcn/ui (new-york) + lucide + motion.
 **Single app** — NO monorepo, NO `packages/*`. Everything under `app/`, `components/`, `lib/`, `hooks/`.
 
-## Actors — MULTI-STORE hierarchy (read SYSTEM_FLOW.txt for the full flow)
+## Actors — MULTI-STORE hierarchy (read docs/flow.md for the full flow)
 
 > **Terminology (UI name vs code/table):** the DB kept its original table names when
 > the hierarchy was added, so watch the mapping:
@@ -139,14 +139,25 @@ pnpm migrate:branches               # Option-A: default "Main Store" branch per 
 1. `cp .env.example .env` — fill DATABASE_URL + DIRECT_URL (Supabase), secrets (min 32 chars: MANUFACTURER/STORE/MANAGER/**BRANCH_MANAGER**), Cloudinary, Qdrant, EMBEDDER_URL (+ optional AI_FEATURES_URL/AI_FEATURES_API_KEY for AI generate), SMTP. No `NEXT_PUBLIC_SUPABASE_*` — app uses Postgres directly, not Supabase Auth.
 2. `pnpm db:deploy` (runs all 5 migrations → full schema, no manual SQL) then `pnpm db:seed` (1 manufacturer + 14 categories).
 3. `pnpm dev`.
-**Handover / client onboarding: `HANDOVER.md` (zero-to-live). Schema: `DATABASE.md`. Flow: `SYSTEM_FLOW.txt`. Detailed setup: `SETUP_GUIDE.md`. Pending work / checklist: `PENDING.md`. End-user (non-technical) guide with roles + demo login credentials + step-by-step workflows: `USER_MANUAL.md`.**
+**All docs live in `docs/` (except this file + `README.md`, which stay at the repo root).**
+Handover / client onboarding: `docs/HANDOVER.md` (zero-to-live). Schema: `docs/DATABASE.md`.
+Full system flow: `docs/flow.md`. Detailed dev setup: `docs/SETUP_GUIDE.md`. Render deploy:
+`docs/DEPLOY_RENDER.md`. AWS migration plan: `docs/AWS_MIGRATION.md`. Pending work / checklist:
+`docs/PENDING.md`. End-user (non-technical) guide with roles + demo login credentials +
+step-by-step workflows: `docs/USER_MANUAL.md`.
 
 ## Migrations (5, all Prisma-managed, idempotent)
 `0001 jewel_factory` · `kiosk_pin` · `b2b_item_image` · `branch_hierarchy` (branches + branch_managers + branch_id/requirement_note on orders + nullable PII) · `order_messages` (order_messages table + OrderKind/MessageSender enums + completed_at on kiosk/b2b/custom). `pnpm db:deploy` applies all. `migrate:categories`/`migrate:branches` = one-off upgrades for an EXISTING DB only.
 
 ## Status
 
-**Latest session — HO Manager role REMOVED:** The Retailer is now the Head Office and does everything the old HO Manager did (all kiosk/custom/restock approvals + per-order chat + all order lists/filters) plus its own tasks. `/store/manager/*` + `/api/manager/*` + the Managers(HO) page (`/store/managers`) are deleted; the portal has **3 cards** (Retailer / Store Manager / Manufacturer). The `store_managers` table is kept but inert (historical approver FKs only). `isOwner` is always true in store-ops now; `approverIdOrNull` always returns null. The `MessageSender.HO` enum + `OrderChat` `viewer='HO'`/`sender:'HO'` values are DATA — unchanged; only display text says "Head Office".
+**Latest session — public landing + docs reorg:**
+- **Branded landing** at `/` (was "Rebuild in progress"): navbar (logo · Catalog · About · Login · Register) + hero + **featured real-catalog showcase** (public `GET /api/kiosk/catalog`, no price) + "why" cards + footer. **Login popup** = 2 columns (Retailer | Store Manager) via `components/landing/LoginModal.tsx` reusing `StaffLoginForm` in a new `bare` mode. **Register prompt** auto-opens ~5s once per session (`components/landing/RegisterPromptModal.tsx`, sessionStorage). New **`/about`** page. **`/manufacturer`** is a hidden admin entry — visiting it shows the manufacturer login popup (`app/manufacturer/page.tsx`). **`/portal` deleted → redirects to `/`**; signOut + login footers repointed to `/`.
+- **Similar-design (visual) search** surfaced on landing + About (real Store Manager `/search` feature, AI-Features `/embed`).
+- **Responsive pass** — app was already mostly mobile-aware; fixed hero headings (smaller base + break-words), a retailer-row truncation, and card/heading padding.
+- **Docs moved to `docs/`** (except this file + `README.md`); `SYSTEM_FLOW.txt` → `docs/flow.md`; stale `USER_FLOWS_AND_GUIDE.txt` deleted.
+
+**HO Manager role REMOVED (prior session):** The Retailer is now the Head Office and does everything the old HO Manager did (all kiosk/custom/restock approvals + per-order chat + all order lists/filters) plus its own tasks. `/store/manager/*` + `/api/manager/*` + the Managers(HO) page (`/store/managers`) are deleted. The `store_managers` table is kept but inert (historical approver FKs only). `isOwner` is always true in store-ops now; `approverIdOrNull` always returns null. The `MessageSender.HO` enum + `OrderChat` `viewer='HO'`/`sender:'HO'` values are DATA — unchanged; only display text says "Head Office".
 
 **Multi-store hierarchy + Store Manager storefront + per-order chat: all on branch `retailer-multistore`.**
 Retailer (Head Office) → Stores(branches) → Store Managers → Customer. Store Manager has a

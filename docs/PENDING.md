@@ -4,9 +4,17 @@ Kya-kya baaki hai. Code sab `retailer-multistore` branch pe hai; `master` purane
 (pre-hierarchy) state pe. Handover se pehle ye complete karo. Tick karte jao.
 
 Related docs: `HANDOVER.md` (client setup) · `DATABASE.md` (schema) ·
-`SYSTEM_FLOW.txt` (flow) · `SETUP_GUIDE.md` (dev setup) · `CLAUDE.md` (technical).
+`flow.md` (flow) · `SETUP_GUIDE.md` (dev setup) · `../CLAUDE.md` (technical).
 
 ---
+
+## 0. Recently completed (done — no action)
+- [x] **HO Manager role removed** — 4 roles now: Manufacturer · Retailer (= Head Office) · Store Manager (`branch_managers`, `/store-manager/login`) · Customer (walk-in). Old `/store/manager/login` route + `store_managers` table are gone/legacy-inert.
+- [x] **Public landing rebuilt** — branded Jewel Factory site: navbar (logo, Catalog, About, Login, Register), featured real-catalog showcase (public `GET /api/kiosk/catalog`, no price), 2-column Login popup (Retailer | Store Manager), auto register-prompt (~5s, once/session), `/about` page, `/manufacturer` as hidden admin entry. `/portal` now just redirects to `/`.
+- [x] **Order-list filters** — every order list (Retailer, Manufacturer, Store Manager) has client-side filters: order-ID search + status + From/To date. Retailer lists also filter by Store (branch); Manufacturer lists by Retailer.
+- [x] **Similar-design (visual/photo) search** — Store Manager → Search, powered by AI-Features `/embed`.
+- [x] **Responsive / mobile-friendly** across the app.
+- [x] **Docs reorganised** into `docs/` folder (`SYSTEM_FLOW.txt` → `flow.md`, stale `USER_FLOWS_AND_GUIDE.txt` deleted).
 
 ## 1. AI-Features service deploy  (repo: github.com/teamai-botivate/Jewel-Factory_AI; local `../AI-Features`)
 - [x] HuggingFace **Docker Space** deployed → `Botivate2026/ai-workspace` (URL `https://botivate2026-ai-workspace.hf.space`)

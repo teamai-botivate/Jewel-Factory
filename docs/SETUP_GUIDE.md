@@ -7,7 +7,7 @@ Follow karo top se bottom, ek-ek step.
 
 > **Naye client ko handover** kar rahe ho? → **`HANDOVER.md`** use karo (accounts +
 > env + DB + deploy + first-login + secret-rotation, ek jagah). Database ka poora
-> naksha → **`DATABASE.md`**. System flow → **`SYSTEM_FLOW.txt`**.
+> naksha → **`DATABASE.md`**. System flow → **`flow.md`**.
 >
 > **Migrations:** `pnpm db:deploy` saari 5 migrations ek command me apply karta hai
 > (init · kiosk_pin · b2b_item_image · branch_hierarchy · order_messages) — fresh DB
@@ -180,7 +180,7 @@ QDRANT_MANUFACTURER_COLLECTION="jewelfactory_manufacturer_products"   # waise hi
 **Ek hi Python service saara AI karta hai** — photo (visual) search KE SAATH
 "Generate with AI" (catalog image + transparent PNG + name/description). Repo:
 `github.com/teamai-botivate/Jewel-Factory_AI` → HuggingFace **Docker Space** pe deploy.
-(Uska apna `README.md` + `CLAUDE.md` deploy steps deta hai.)
+(Us `Jewel-Factory_AI` repo ke apne README + CLAUDE deploy steps dekho.)
 
 **Option A — Abhi skip karo (recommended for first run):**
 ```
@@ -388,16 +388,19 @@ Browser mein khol ke test karo:
 
 | URL                                           | Kya                                                        |
 | --------------------------------------------- | ---------------------------------------------------------- |
-| `http://localhost:3000`                     | Landing → Staff Portal                                    |
-| `http://localhost:3000/portal`              | 3 login cards                                              |
-| `http://localhost:3000/manufacturer/login`  | `admin@atjewellers.com` / `manufacturer123` (Manufacturer) |
+| `http://localhost:3000`                     | Branded Jewel Factory landing (navbar + featured catalog + **Login popup**: Retailer \| Store Manager) |
+| `http://localhost:3000/about`               | About page (linked from landing navbar) |
+| `http://localhost:3000/manufacturer/login`  | `admin@atjewellers.com` / `manufacturer123` (Manufacturer — hidden admin entry) |
 | `http://localhost:3000/store/login`         | `store@demo.com` / `store123` — **Retailer** (owner / Head Office) |
 | `http://localhost:3000/store/branches`      | Retailer: manage **Stores (branches)** + store managers + restock PIN |
-| `http://localhost:3000/store-manager/login` | **Store Manager** (create one in /store/branches first) |
+| `http://localhost:3000/store-manager/login` | **Store Manager** (no default login — create one in /store/branches first) |
 | `http://localhost:3000/demo`                | Legacy public kiosk (branch kiosk is inside /store-manager) |
 
+> `/portal` ab sirf `/` (landing) pe redirect karta hai. Staff landing ke **Login popup**
+> se ya seedha `/store/login` · `/store-manager/login` · `/manufacturer` se login karte hain.
+
 **Roles (3 staff + customer):** Manufacturer · Retailer (`/store`, = Head Office, does all approvals + chat) ·
-Store Manager (`/store-manager`) · Customer (walk-in, no login). See `SYSTEM_FLOW.txt` for the full flow.
+Store Manager (`/store-manager`) · Customer (walk-in, no login). See `flow.md` for the full flow.
 
 **Store Manager first login:** the Retailer (Head Office) must first create a Store (branch) and a
 Store Manager under it at `/store/branches`. Then that store manager logs in at

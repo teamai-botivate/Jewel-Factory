@@ -170,7 +170,7 @@ pnpm db:seed
 | URL | Test |
 |---|---|
 | `https://<app>.onrender.com/api/health` | `{"data":{"ok":true}}` dikhna chahiye |
-| `https://<app>.onrender.com/portal` | 3 login cards |
+| `https://<app>.onrender.com/` | Branded landing (navbar + featured catalog + **Login popup**: Retailer \| Store Manager) |
 | `/manufacturer/login` | `admin@atjewellers.com` / seed password |
 | `/store/register` | naya store register (fir manufacturer approve) |
 

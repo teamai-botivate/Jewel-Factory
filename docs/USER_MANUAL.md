@@ -51,7 +51,12 @@ laata hai:
 
 ## 3. Login — kaha, kaise (URLs + Credentials)
 
-Sabse pehla page: **`/portal`** — yahaan 3 login cards hote hain. Apna card chuno.
+Sabse pehla page: **home (`/`)** — ye ek branded Jewel Factory landing hai (navbar:
+logo · Catalog · About · Login · Register, featured designs, aur ~5 sec baad ek
+register-prompt). **Navbar ke "Login" pe click karo** → ek popup khulta hai jisme do
+option hote hain: **Retailer** aur **Store Manager**. Apna chuno. (Manufacturer ka
+login chhupa hua hai — seedha `/manufacturer` pe jao.) Chaaho to niche wale seedhe
+login URLs bhi use kar sakte ho.
 
 | Role | Login page | Demo Email | Demo Password |
 |------|-----------|------------|---------------|
@@ -286,4 +291,4 @@ catalog se link ho jaata hai.
 ---
 
 *Powered by Jewel Factory. Ye manual features ke saath update hota rahega — technical
-detail ke liye `SYSTEM_FLOW.txt`, setup ke liye `HANDOVER.md` / `SETUP_GUIDE.md`.*
+detail ke liye `flow.md`, setup ke liye `HANDOVER.md` / `SETUP_GUIDE.md`.*
