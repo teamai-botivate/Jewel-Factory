@@ -156,47 +156,48 @@ export default function StoreRegisterPage() {
   }
 
   return (
-    <main className="relative min-h-dvh overflow-hidden bg-[#f4f0e8] px-3 py-3 text-[#28231e] sm:px-5 sm:py-5 lg:px-8 lg:py-7">
+    <main className="relative min-h-dvh overflow-x-clip bg-[#f4f0e8] px-3 py-3 text-[#28231e] sm:px-5 sm:py-5 lg:px-8 lg:py-7">
       <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_12%_12%,rgba(206,166,72,0.18),transparent_30rem),radial-gradient(circle_at_90%_88%,rgba(128,99,49,0.08),transparent_28rem)]" />
 
-      <div className="relative mx-auto grid min-h-[calc(100dvh-1.5rem)] w-full max-w-[1240px] overflow-hidden rounded-[26px] border border-[#ded6ca] bg-white shadow-[0_28px_90px_rgba(62,48,29,0.12)] sm:min-h-[calc(100dvh-2.5rem)] md:grid-cols-[0.78fr_1.22fr] lg:min-h-[calc(100dvh-3.5rem)]">
-        <aside className="relative hidden min-h-full flex-col justify-between overflow-hidden border-r border-[#40382f] bg-[#211c17] p-8 text-[#faf7f0] md:flex lg:p-12">
+      <div className="relative mx-auto grid min-h-[calc(100dvh-1.5rem)] w-full max-w-[1240px] rounded-[26px] border border-[#ded6ca] bg-white shadow-[0_28px_90px_rgba(62,48,29,0.12)] sm:min-h-[calc(100dvh-2.5rem)] md:grid-cols-[0.78fr_1.22fr] lg:min-h-[calc(100dvh-3.5rem)]">
+        <aside className="relative hidden self-start overflow-hidden rounded-l-[25px] border-r border-[#40382f] bg-[#211c17] p-8 text-[#faf7f0] md:sticky md:top-5 md:flex md:h-[calc(100dvh-2.5rem)] md:flex-col lg:top-7 lg:h-[calc(100dvh-3.5rem)] lg:p-12">
           <div aria-hidden className="absolute -bottom-20 -right-20 h-80 w-80 rotate-12 border border-[#d0a84e]/15" />
           <div aria-hidden className="absolute -bottom-5 -right-5 h-52 w-52 rotate-12 border border-[#d0a84e]/15" />
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/JF.avif" alt="" aria-hidden className="pointer-events-none absolute -right-16 top-1/2 w-80 -translate-y-1/2 opacity-[0.045]" />
-          <Wordmark href="/" size="md" tone="dark" className="relative z-10" />
+          <div className="relative z-10 flex flex-1 items-center">
+            <div className="w-full max-w-sm">
+              <Wordmark href="/" size="md" tone="dark" />
+              <span className="mt-10 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#d1a541] text-[#201b16]"><Store className="h-5 w-5" /></span>
+              <p className="mt-6 text-[10px] font-semibold uppercase tracking-[0.22em] text-[#d9b764]">Retailer partnership</p>
+              <h1 className="mt-3 max-w-[20ch] font-display text-[clamp(1.75rem,2.8vw,2.85rem)] font-medium leading-[1.08] tracking-[-0.02em]">
+                Join the Jewel Factory network.
+              </h1>
+              <p className="mt-4 max-w-[38ch] text-sm leading-6 text-[#c5bdb3]">
+                Share your Head Office details, delivery address, and first store manager for review.
+              </p>
 
-          <div className="relative z-10 max-w-sm py-12">
-            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#d1a541] text-[#201b16]"><Store className="h-5 w-5" /></span>
-            <p className="mt-7 text-[10px] font-semibold uppercase tracking-[0.22em] text-[#d9b764]">Retailer partnership</p>
-            <h1 className="mt-4 max-w-[20ch] font-display text-[clamp(1.75rem,2.8vw,2.85rem)] font-medium leading-[1.08] tracking-[-0.02em]">
-              Join the Jewel Factory network.
-            </h1>
-            <p className="mt-5 max-w-[38ch] text-sm leading-6 text-[#c5bdb3]">
-              Share your Head Office details, delivery address, and first store manager for review.
-            </p>
-
-            <div className="mt-8 border-t border-white/12 pt-7">
-              <ol className="space-y-4">
-                {[
-                  ['01', 'Share your business and delivery details'],
-                  ['02', 'The manufacturer reviews your application'],
-                  ['03', 'Create branches and begin ordering'],
-                ].map(([number, text]) => (
-                  <li key={number} className="flex items-center gap-3 text-xs leading-5 text-[#eee8df] lg:text-sm">
-                    <span className="font-mono text-[10px] tracking-widest text-[#d9b764]">{number}</span>
-                    <span className="h-px w-7 bg-white/20" />
-                    <span>{text}</span>
-                  </li>
-                ))}
-              </ol>
+              <div className="mt-7 border-t border-white/12 pt-6">
+                <ol className="space-y-3">
+                  {[
+                    ['01', 'Share your business and delivery details'],
+                    ['02', 'The manufacturer reviews your application'],
+                    ['03', 'Create branches and begin ordering'],
+                  ].map(([number, text]) => (
+                    <li key={number} className="flex items-center gap-3 text-xs leading-5 text-[#eee8df] lg:text-sm">
+                      <span className="font-mono text-[10px] tracking-widest text-[#d9b764]">{number}</span>
+                      <span className="h-px w-7 bg-white/20" />
+                      <span>{text}</span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
             </div>
           </div>
           <p className="relative z-10 flex items-center gap-2 text-xs text-[#aaa196]"><ShieldCheck className="h-4 w-4 text-[#d2aa4e]" /> Submitted securely for review</p>
         </aside>
 
-        <section className="relative flex min-h-full flex-col bg-[#fffdf9]">
+        <section className="relative flex min-h-full flex-col rounded-[25px] bg-[#fffdf9] md:rounded-l-none">
           <div className="flex items-center justify-between border-b border-[#ebe5dc] px-5 py-4 md:justify-end md:px-8">
             <Wordmark href="/" size="sm" className="md:hidden" />
             <Link href="/store/login" className="inline-flex min-h-10 items-center gap-2 rounded-full px-3 text-xs font-medium text-[#71685f] transition-colors hover:bg-[#f4efe6] hover:text-[#29231e] sm:text-sm">
