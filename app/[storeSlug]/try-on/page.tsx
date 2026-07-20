@@ -62,7 +62,7 @@ function TryOnInner() {
       const p = products.find((x) => x.id === preselect);
       if (p) void select(p);
     }
-  }, [preselect, products]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [preselect, products]);
 
   return (
     <main className="mx-auto max-w-5xl px-3 py-6 sm:px-4 sm:py-8">

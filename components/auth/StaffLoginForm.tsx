@@ -1,9 +1,10 @@
 'use client';
 
-import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { ArrowLeft, Eye, EyeOff, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 
+import { Wordmark } from '@/components/landing/Wordmark';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -14,7 +15,6 @@ export function StaffLoginForm({
   subtitle,
   loginPath,
   redirectTo,
-  brandWordmark = true,
   footerLinks = [],
   forgotHref,
   bare = false,
@@ -23,6 +23,7 @@ export function StaffLoginForm({
   subtitle: string;
   loginPath: string; // e.g. /api/store/login
   redirectTo: string; // e.g. /store/dashboard
+  /** @deprecated no longer used — the wordmark now lives in the page top bar. */
   brandWordmark?: boolean;
   footerLinks?: FooterLink[];
   forgotHref?: string;
@@ -73,16 +74,11 @@ export function StaffLoginForm({
   const form = (
       <form
         onSubmit={submit}
-        className={bare ? 'w-full space-y-4' : 'w-full max-w-sm space-y-5 rounded-2xl border bg-card p-6 shadow-sm sm:p-8'}
+        className={bare ? 'w-full space-y-4' : 'w-full max-w-sm space-y-5 rounded-3xl border bg-card p-6 shadow-xl sm:p-8'}
       >
-        {(brandWordmark || title || subtitle) && (
+        {(title || subtitle) && (
           <div className="text-center">
-            {brandWordmark && (
-              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                <span className="text-[#C9A84C]">Jewel</span> Factory
-              </p>
-            )}
-            {title && <h1 className="mt-2 text-2xl font-medium tracking-tight">{title}</h1>}
+            {title && <h1 className="font-display text-2xl font-medium tracking-tight">{title}</h1>}
             {subtitle && <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>}
           </div>
         )}
@@ -145,8 +141,24 @@ export function StaffLoginForm({
 
   if (bare) return form;
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-3 py-10">
-      {form}
+    <div className="relative flex min-h-screen flex-col overflow-hidden bg-background">
+      {/* Soft gold glow backdrop */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(52rem_32rem_at_50%_-10%,rgba(201,168,76,0.16),transparent_60%)]" />
+      {/* Faint JF monogram watermark */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/JF.avif" alt="" aria-hidden className="pointer-events-none absolute -right-16 top-10 hidden w-[28rem] max-w-none opacity-[0.04] lg:block" />
+
+      {/* Top bar — wordmark + back to Jewel Factory */}
+      <div className="relative z-10 flex items-center justify-between px-4 py-4 sm:px-6">
+        <Wordmark href="/" size="sm" />
+        <Link href="/" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground">
+          <ArrowLeft className="h-4 w-4" /> <span className="hidden sm:inline">Back to Jewel Factory</span><span className="sm:hidden">Home</span>
+        </Link>
+      </div>
+
+      <div className="relative z-10 flex flex-1 items-center justify-center px-4 pb-16">
+        <div className="w-full max-w-sm">{form}</div>
+      </div>
     </div>
   );
 }

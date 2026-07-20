@@ -65,9 +65,9 @@ Visiting `/` (or `/portal`, `/about`) with no session shows the **branded landin
 - **Register prompt:** ~5 s after load a "Become a Retailer" popup appears once per
   session (dismissible), nudging new retailers to `/store/register`.
 - **`/about`:** roles, order flow, and the platform's principles.
-- **`/manufacturer`:** a hidden admin entry — typing this URL shows the manufacturer
-  login popup (or redirects to the dashboard if already signed in). Not linked
-  anywhere on the public site.
+- **`/manufacturer`:** the manufacturer sign-in entry — opening this URL shows the
+  manufacturer login page (or redirects to the dashboard if already signed in).
+  It is available from the public footer's **Manufacturer access** link.
 
 ---
 
@@ -247,9 +247,9 @@ See [DATABASE.md](DATABASE.md) for the full schema.
 | `branches` | **Store** + fixed address + `restock_pin_hash` |
 | `branch_managers` | **Store Manager** |
 | `manufacturer_products` | catalog design (gold only, no price, `JF-XXXX`, `has_tryon`) |
-| `kiosk_orders` | guest orders + `branch_id`, `branch_name_snapshot`, `requirement_note`, `completed_at`; customer PII optional |
+| `kiosk_orders` | guest orders + `branch_id`, `branch_name_snapshot`, `requirement_note`, `completed_at`; the current kiosk flow does **not** collect or populate customer PII |
 | `b2b_orders` | restock + `branch_id`, `branch_name_snapshot`, `requirement_note`, `completed_at` |
-| `custom_design_requests` | + `branch_id`, `completed_at`; customer PII optional |
+| `custom_design_requests` | + `branch_id`, `completed_at`; the current kiosk flow does **not** collect or populate customer PII |
 | `custom_design_orders` | sanitized order forwarded to the manufacturer |
 | `order_messages` | per-order chat (Head Office ↔ Store Manager); polymorphic (`order_kind` + `order_id`) |
 

@@ -20,8 +20,16 @@ export type ARViewportHandle = {
 type Props = {
   className?: string;
   onStatusChange?: (s: EngineStatus) => void;
+  /** Reports the camera stream's native width/height ratio after metadata loads. */
+  onCameraAspectRatioChange?: (ratio: number) => void;
   /** Auto-start the camera on mount. Defaults to true. */
   autoStart?: boolean;
+  /**
+   * Fill the parent element (h-full w-full, no aspect box) instead of the default
+   * centered aspect-ratio card. Used by the full-screen immersive try-on so the
+   * camera is responsive on any device.
+   */
+  fill?: boolean;
 };
 
 function statusToHint(s: EngineStatus): { label: string; tone: 'neutral' | 'warn' | 'error' } {
@@ -46,7 +54,7 @@ function statusToHint(s: EngineStatus): { label: string; tone: 'neutral' | 'warn
 }
 
 const ARViewport = forwardRef<ARViewportHandle, Props>(function ARViewport(
-  { className = '', onStatusChange, autoStart = true },
+  { className = '', onStatusChange, onCameraAspectRatioChange, autoStart = true, fill = false },
   ref,
 ) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -72,6 +80,25 @@ const ARViewport = forwardRef<ARViewportHandle, Props>(function ARViewport(
   }, [status, onStatusChange]);
 
   useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !onCameraAspectRatioChange) return;
+
+    const reportNativeRatio = () => {
+      if (video.videoWidth > 0 && video.videoHeight > 0) {
+        onCameraAspectRatioChange(video.videoWidth / video.videoHeight);
+      }
+    };
+
+    video.addEventListener('loadedmetadata', reportNativeRatio);
+    video.addEventListener('resize', reportNativeRatio);
+    reportNativeRatio();
+    return () => {
+      video.removeEventListener('loadedmetadata', reportNativeRatio);
+      video.removeEventListener('resize', reportNativeRatio);
+    };
+  }, [onCameraAspectRatioChange]);
+
+  useEffect(() => {
     if (!autoStart) return;
     void start();
     return () => stop();
@@ -82,7 +109,11 @@ const ARViewport = forwardRef<ARViewportHandle, Props>(function ARViewport(
 
   return (
     <div
-      className={`relative mx-auto aspect-[3/4] w-full max-h-[70vh] overflow-hidden rounded-2xl bg-black sm:aspect-[4/3] lg:aspect-square ${className}`}
+      className={`relative overflow-hidden bg-black ${
+        fill
+          ? 'h-full w-full rounded-none'
+          : 'mx-auto aspect-[3/4] w-full max-h-[70vh] rounded-2xl sm:aspect-[4/3] lg:aspect-square'
+      } ${className}`}
       data-testid="ar-viewport"
     >
       {/* Video: CSS-mirrored so the user's left looks like their left.
@@ -106,9 +137,9 @@ const ARViewport = forwardRef<ARViewportHandle, Props>(function ARViewport(
       {/* HUD — DOM elements over the canvas, not drawn into it, so captures
           stay clean. */}
       <div className="pointer-events-none absolute inset-0 flex flex-col">
-        <div className="flex items-start justify-between p-4">
+        <div className="flex items-start justify-between gap-2 p-2 sm:p-4">
           <div
-            className={`rounded-full px-3 py-1.5 text-xs font-medium backdrop-blur-md ${
+            className={`max-w-[75%] rounded-full px-3 py-1.5 text-[10px] font-medium backdrop-blur-md sm:max-w-none sm:text-xs ${
               hint.tone === 'error'
                 ? 'bg-red-500/80 text-white'
                 : hint.tone === 'warn'
@@ -120,7 +151,7 @@ const ARViewport = forwardRef<ARViewportHandle, Props>(function ARViewport(
           </div>
 
           {(status === 'tracking' || status === 'no_subject') && (
-            <div className="rounded-full bg-black/50 px-3 py-1.5 text-[10px] font-mono text-white/80 backdrop-blur-md">
+            <div className="hidden rounded-full bg-black/50 px-3 py-1.5 text-[10px] font-mono text-white/80 backdrop-blur-md sm:block">
               {metricsSnapshot.fps} FPS · {metricsSnapshot.inferenceMs}ms · conf {Math.round(metricsSnapshot.confidence * 100)}%
             </div>
           )}

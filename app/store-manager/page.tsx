@@ -1,204 +1,174 @@
 'use client';
 
-import { ArrowRight, Sparkles, Camera, X, Award } from 'lucide-react';
+import { ArrowRight, Award, Camera, Sparkles, X } from 'lucide-react';
 import Link from 'next/link';
 import { motion } from 'motion/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
-import { titleCaseName, productMetaLine } from '@/lib/format';
-import { useStoreManager } from './layout';
+import { productMetaLine, titleCaseName } from '@/lib/format';
+import { useStoreManager } from './store-manager-context';
 
 type Img = { secureUrl: string; isPrimary: boolean };
-type Product = { id: string; designNumber: string; name: string; category: string | null; subCategory: string | null; purity: string | null; weightGrams: string | null; hasTryon: boolean; images: Img[] };
+type Product = {
+  id: string;
+  designNumber: string;
+  name: string;
+  category: string | null;
+  subCategory: string | null;
+  purity: string | null;
+  weightGrams: string | null;
+  hasTryon: boolean;
+  images: Img[];
+};
 
-const primary = (p: Product) => (p.images.find((i) => i.isPrimary) ?? p.images[0])?.secureUrl;
+const primary = (product: Product) => (product.images.find((image) => image.isPrimary) ?? product.images[0])?.secureUrl;
 
 export default function StoreManagerHome() {
-  const me = useStoreManager();
+  const manager = useStoreManager();
   const [products, setProducts] = useState<Product[]>([]);
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
-    (async () => {
+    let cancelled = false;
+    void (async () => {
       try {
-        const res = await fetch('/api/branch-manager/catalog', { cache: 'no-store', credentials: 'same-origin' });
-        if (res.status === 401) { window.location.assign('/store-manager/login'); return; }
-        const json = (await res.json()) as { data?: Product[] };
-        const list = (json.data ?? []).filter((p) => primary(p));
-        // Shuffle once (Fisher–Yates) so sections show fresh, varied products each visit.
-        for (let i = list.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [list[i], list[j]] = [list[j]!, list[i]!];
+        const response = await fetch('/api/branch-manager/catalog', { cache: 'no-store', credentials: 'same-origin' });
+        if (response.status === 401) { window.location.assign('/store-manager/login'); return; }
+        const json = (await response.json()) as { data?: Product[] };
+        const list = (json.data ?? []).filter((product) => primary(product));
+        for (let index = list.length - 1; index > 0; index--) {
+          const randomIndex = Math.floor(Math.random() * (index + 1));
+          [list[index], list[randomIndex]] = [list[randomIndex]!, list[index]!];
         }
-        setProducts(list);
-      } catch { /* ignore */ }
+        if (!cancelled) setProducts(list);
+      } catch { /* Keep the storefront usable even if the catalogue is warming up. */ }
     })();
+    return () => { cancelled = true; };
   }, []);
 
-  const floats = products.slice(0, 3);
   const featured = products[0];
-
-  // "Popular now" and "More to explore" show DIFFERENT random products when there
-  // are enough; with a small catalog they overlap so both sections stay full.
-  const enough = products.length >= 8;
   const popular = products.slice(0, 4);
-  const more = enough ? products.slice(4, 12) : products.slice(0, 8);
+  const more = products.length >= 8 ? products.slice(4, 12) : products.slice(0, 8);
+  const collections = useMemo(() => {
+    const seen = new Set<string>();
+    return products.filter((product) => {
+      if (!product.category || seen.has(product.category)) return false;
+      seen.add(product.category);
+      return true;
+    }).slice(0, 3);
+  }, [products]);
 
   return (
-    <div className="space-y-14 pb-4">
-      {/* ── Storefront hero ────────────────────────────────────────────────── */}
-      <section className="relative w-full min-h-[calc(100svh-160px)] overflow-hidden bg-[#211711]">
-        {/* Faded showroom backdrop */}
+    <div className="min-h-screen overflow-hidden">
+      <section className="relative min-h-[calc(100svh-92px)] overflow-hidden bg-[#211711]">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="https://images.unsplash.com/photo-1599643478524-fb66f7ca2b6e?w=1800&q=90"
-          alt="Premium jewellery showroom"
-          className="absolute inset-0 h-full w-full object-cover opacity-[0.18]"
-        />
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(20,14,10,0.86)_0%,rgba(20,14,10,0.60)_42%,rgba(20,14,10,0.22)_72%,rgba(20,14,10,0.46)_100%)]" />
+        <img src="https://images.unsplash.com/photo-1599643478524-fb66f7ca2b6e?w=1800&q=90" alt="Premium jewellery showroom" className="absolute inset-0 h-full w-full object-cover opacity-[0.18]" />
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(20,14,10,0.84)_0%,rgba(20,14,10,0.58)_42%,rgba(20,14,10,0.20)_72%,rgba(20,14,10,0.44)_100%)]" />
+        <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#fbf9f5]/45 via-[#fbf9f5]/10 to-transparent" />
 
-        {/* Real catalog products, floating (desktop) */}
-        <div className="pointer-events-none absolute right-[-1%] top-[8%] hidden h-[80%] w-[48%] md:block">
-          {floats[0] && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={primary(floats[0])} alt="" aria-hidden className="absolute right-[2%] top-0 h-[46%] w-auto rounded-2xl object-cover opacity-95 shadow-[0_38px_72px_rgba(0,0,0,0.55)]" />
-          )}
-          {floats[1] && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={primary(floats[1])} alt="" aria-hidden className="absolute bottom-[6%] right-[34%] h-[30%] w-auto rotate-[-8deg] rounded-2xl object-cover opacity-90 shadow-[0_28px_50px_rgba(0,0,0,0.48)]" />
-          )}
-          {floats[2] && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={primary(floats[2])} alt="" aria-hidden className="absolute bottom-[18%] right-[2%] h-[32%] w-auto rotate-[8deg] rounded-2xl object-cover opacity-90 shadow-[0_28px_50px_rgba(0,0,0,0.48)]" />
-          )}
+        <div className="pointer-events-none absolute right-[-1%] top-[9%] hidden h-[78%] w-[49%] md:block">
+          {products[0] ? <FloatingProduct product={products[0]} className="absolute right-0 top-0 h-[51%] max-w-[62%] opacity-95 drop-shadow-[0_38px_72px_rgba(0,0,0,0.55)]" /> : null}
+          {products[1] ? <FloatingProduct product={products[1]} className="absolute bottom-[5%] right-[38%] h-[27%] max-w-[34%] -rotate-6 opacity-90 drop-shadow-[0_28px_50px_rgba(0,0,0,0.48)]" /> : null}
+          {products[2] ? <FloatingProduct product={products[2]} className="absolute bottom-[16%] right-0 h-[29%] max-w-[35%] rotate-6 opacity-90 drop-shadow-[0_28px_50px_rgba(0,0,0,0.48)]" /> : null}
         </div>
-
-        {/* Copy */}
-        <div className="relative mx-auto flex min-h-[calc(100svh-160px)] max-w-[1400px] items-center px-6 py-16 lg:px-10">
-          <div className="max-w-2xl">
-            <p className="mb-5 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.28em] text-[#e4cf8f]">
-              <Sparkles className="h-3.5 w-3.5" /> AI jewellery showroom
-            </p>
-            <h1 className="font-display max-w-2xl break-words text-3xl font-normal leading-[1.05] text-white sm:text-5xl sm:leading-[0.98] md:text-7xl">
-              {me.retailer.name}
-            </h1>
-            <p className="mt-5 max-w-md text-lg leading-7 text-white/78">
-              {me.branch.name} · Browse the live catalogue with the customer, preview pieces with virtual try-on, and place their order.
-            </p>
-            <div className="mt-8 flex flex-wrap items-center gap-3">
-              <Link href="/store-manager/kiosk" className="metal-sheen inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold text-[#17120b] shadow-lg shadow-black/20 transition-transform hover:scale-[1.02]">
-                Explore Catalogue <ArrowRight className="h-4 w-4" />
-              </Link>
-              <Link href="/store-manager/try-on" className="inline-flex items-center gap-2 rounded-full border border-white/35 bg-white/[0.08] px-6 py-3 text-sm font-semibold text-white backdrop-blur-md transition-colors hover:bg-white/[0.14]">
-                <Camera className="h-4 w-4" /> Try On
-              </Link>
-            </div>
+        {products[0] ? (
+          <div className="pointer-events-none absolute -right-[42%] top-[9%] h-[44%] w-[94%] opacity-30 md:hidden">
+            <FloatingProduct product={products[0]} className="h-full w-full drop-shadow-[0_30px_60px_rgba(0,0,0,0.5)]" />
           </div>
+        ) : null}
+
+        <div className="relative mx-auto flex min-h-[calc(100svh-92px)] max-w-[1400px] items-center px-4 py-16 md:px-6 lg:px-12">
+          <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="max-w-2xl">
+            <p className="mb-5 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.28em] text-[#e4cf8f]"><Sparkles className="h-3.5 w-3.5" /> AI jewellery showroom</p>
+            <h1 className="font-display max-w-2xl break-words text-5xl font-normal leading-[0.98] text-white sm:text-6xl md:text-7xl">{manager.retailer.name}</h1>
+            <p className="mt-5 max-w-md text-lg leading-7 text-white/75">Browse the live catalogue at {manager.branch.name}, find similar designs, and preview favourites with virtual try-on.</p>
+            <div className="mt-8 flex flex-wrap items-center gap-3">
+              <Link href="/store-manager/kiosk" className="metal-sheen inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold text-[#17120b] shadow-lg shadow-black/20 transition-transform hover:scale-[1.02]">Explore Catalogue <ArrowRight className="h-4 w-4" /></Link>
+              <Link href="/store-manager/try-on" className="inline-flex items-center gap-2 rounded-full border border-white/35 bg-white/[0.08] px-6 py-3 text-sm font-semibold text-white backdrop-blur-md transition-colors hover:bg-white/[0.14]"><Camera className="h-4 w-4" /> Try On</Link>
+            </div>
+          </motion.div>
         </div>
       </section>
 
-      {/* Featured piece — floating dismissible card (real data) */}
-      {featured && !dismissed && (
-        <motion.aside
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.18, duration: 0.45 }}
-          className="fixed bottom-5 right-5 z-40 hidden w-[340px] rounded-xl border border-black/10 bg-[#fbf8f1]/95 p-3 text-left shadow-[0_20px_60px_rgba(0,0,0,0.24)] ring-1 ring-black/5 backdrop-blur-xl md:block"
-        >
-          <div className="mb-3 flex items-center justify-between gap-3 border-b border-black/10 pb-2">
-            <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#9b762f]">Featured piece</span>
-            <button type="button" onClick={() => setDismissed(true)} className="flex h-7 w-7 items-center justify-center rounded-full text-[#5f574f] transition-colors hover:bg-black/5 hover:text-[#1f1a14]" aria-label="Dismiss">
-              <X className="h-3.5 w-3.5" />
-            </button>
-          </div>
-          <Link href="/store-manager/kiosk" className="group flex w-full items-center gap-4 text-left">
-            <span className="h-20 w-16 shrink-0 overflow-hidden rounded-lg bg-[#e9e2d7] ring-1 ring-black/10">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={primary(featured)} alt={featured.name} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
-            </span>
-            <span className="min-w-0">
-              <span className="line-clamp-1 text-sm font-semibold text-[#1f1a14]">{titleCaseName(featured.name)}</span>
-              <span className="mt-1 block text-xs text-[#6f675e]">{featured.category ?? 'Jewellery'} · {featured.designNumber}</span>
-              <span className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-[#b68a3e]">Open catalogue <ArrowRight className="h-3 w-3" /></span>
-            </span>
+      {featured && !dismissed ? (
+        <motion.aside initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18, duration: 0.45 }} className="fixed bottom-5 right-5 z-40 hidden w-[350px] rounded-xl border border-black/10 bg-[#fbf8f1]/95 p-3 shadow-[0_20px_60px_rgba(0,0,0,0.24)] ring-1 ring-black/5 backdrop-blur-xl md:block">
+          <div className="mb-3 flex items-center justify-between gap-3 border-b border-black/10 pb-2"><span className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#9b762f]">Featured piece</span><button onClick={() => setDismissed(true)} className="flex h-7 w-7 items-center justify-center rounded-full text-[#5f574f] hover:bg-black/5" aria-label="Dismiss featured piece"><X className="h-3.5 w-3.5" /></button></div>
+          <Link href="/store-manager/kiosk" className="group flex items-center gap-4">
+            <span className="h-20 w-16 shrink-0 overflow-hidden rounded-lg bg-[#e9e2d7] ring-1 ring-black/10"><ProductImage product={featured} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" /></span>
+            <span className="min-w-0"><span className="line-clamp-1 text-sm font-semibold text-[#1f1a14]">{titleCaseName(featured.name)}</span><span className="mt-1 block text-xs text-[#6f675e]">{featured.category ?? 'Jewellery'} · {featured.designNumber}</span><span className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-[#b68a3e]">View in catalogue <ArrowRight className="h-3 w-3" /></span></span>
           </Link>
         </motion.aside>
-      )}
+      ) : null}
 
-      {/* ── Popular now (dark section, top catalog products) ─────────────────── */}
-      {products.length > 0 && (
-        <section className="w-full bg-[#1b1612] py-14 text-white md:py-20">
-          <div className="mx-auto max-w-[1400px] px-6 lg:px-10">
-            <div className="mb-8 flex items-end justify-between gap-6">
-              <div>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-[0.24em] text-[#e4cf8f]">Popular now</p>
-                <h2 className="font-display text-3xl font-normal md:text-5xl">Pieces drawing attention</h2>
-              </div>
-              <Link href="/store-manager/kiosk" className="luxury-link-underline hidden text-sm font-semibold text-white/65 hover:text-white sm:inline-flex">View catalogue</Link>
-            </div>
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-6 xl:grid-cols-4">
-              {popular.map((p) => <MiniCard key={p.id} p={p} dark />)}
-            </div>
+      {collections.length > 0 ? (
+        <section className="mx-auto max-w-[1400px] px-4 py-14 md:px-6 md:py-20 lg:px-12">
+          <SectionHeading eyebrow="Explore" title="Curated collections" action="View all jewellery" href="/store-manager/kiosk" />
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-5 md:gap-5">
+            <CollectionTile product={collections[0]!} large index={0} />
+            <div className="grid gap-4 md:col-span-2 md:gap-5">{collections.slice(1, 3).map((product, index) => <CollectionTile key={product.category} product={product} index={index + 1} />)}</div>
           </div>
         </section>
-      )}
+      ) : null}
 
-      {/* ── Virtual Try-On banner ───────────────────────────────────────────── */}
-      <section className="mx-auto w-full max-w-[1400px] px-6 lg:px-10">
-        <div className="grid overflow-hidden rounded-2xl bg-[#211913] text-white md:grid-cols-[1.1fr_0.9fr]">
-          <div className="px-6 py-10 md:px-10 md:py-14">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.24em] text-[#e4cf8f]">Virtual try-on</p>
-            <h2 className="font-display max-w-xl text-3xl font-normal leading-tight md:text-5xl">Bring the piece closer before you decide.</h2>
-            <p className="mt-5 max-w-md text-sm leading-6 text-white/68">Preview necklaces, earrings, rings, and bangles live on the kiosk with the customer.</p>
-            <Link href="/store-manager/try-on" className="metal-sheen mt-8 inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold text-[#17120b] transition-transform hover:scale-[1.02]">
-              <Sparkles className="h-4 w-4" /> Open Try-On
-            </Link>
-          </div>
-          <div className="relative aspect-[16/10] w-full overflow-hidden bg-[#2a1f15] sm:aspect-[16/9] md:aspect-auto md:h-full md:min-h-[300px]">
-            {/* Gold-only business: show a real catalog piece (prefer a try-on one),
-                falling back to a gold jewellery photo. */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={(() => { const p = products.find((x) => x.hasTryon) ?? products[0]; return (p && primary(p)) || 'https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=900&q=85'; })()}
-              alt="Gold jewellery"
-              className="absolute inset-0 h-full w-full object-cover object-center"
-            />
-          </div>
+      <section className="bg-[#1b1612] py-14 text-white md:py-20">
+        <div className="mx-auto max-w-[1400px] px-4 md:px-6 lg:px-12">
+          <SectionHeading eyebrow="Popular now" title="Pieces drawing attention" action="View catalogue" href="/store-manager/kiosk" dark />
+          {popular.length > 0 ? <div className="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-6 xl:grid-cols-4">{popular.map((product, index) => <ProductCard key={product.id} product={product} index={index} dark />)}</div> : <LoadingGrid />}
         </div>
       </section>
 
-      {/* ── More to explore ─────────────────────────────────────────────────── */}
-      {more.length > 0 && (
-        <section className="mx-auto w-full max-w-[1400px] px-6 lg:px-10">
-          <div className="mb-8">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.24em] text-primary">Discover</p>
-            <h2 className="font-display text-3xl font-normal md:text-5xl">More to explore</h2>
-          </div>
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-6 xl:grid-cols-4">
-            {more.map((p) => <MiniCard key={p.id} p={p} />)}
-          </div>
-        </section>
-      )}
+      <section className="mx-auto max-w-[1400px] px-4 py-14 md:px-6 md:py-20 lg:px-12">
+        <div className="mb-8"><p className="mb-2 text-xs font-semibold uppercase tracking-[0.24em] text-[#b68a3e]">Ways to discover</p><h2 className="font-display text-3xl font-normal md:text-5xl">Find the right piece</h2></div>
+        <div className="no-scrollbar flex snap-x gap-4 overflow-x-auto pb-2">
+          {[
+            { title: 'Search by Photo', href: '/store-manager/search', image: products[3] ?? products[0], label: 'Visual match' },
+            { title: 'Virtual Try-On', href: '/store-manager/try-on', image: products.find((product) => product.hasTryon) ?? products[1], label: 'Live preview' },
+            { title: 'Custom Design', href: '/store-manager/custom-design', image: products[5] ?? products[2], label: 'Made to request' },
+          ].map((item, index) => item.image ? (
+            <motion.div key={item.title} initial={{ opacity: 0, x: 16 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ delay: index * 0.06 }} className="group relative h-[250px] w-[210px] shrink-0 snap-start overflow-hidden rounded-lg sm:w-[250px]">
+              <ProductImage product={item.image} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/15 to-transparent" />
+              <Link href={item.href} className="absolute inset-0 flex flex-col justify-end p-5"><span className="mb-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#e4cf8f]">{item.label}</span><span className="font-display text-2xl text-white">{item.title}</span></Link>
+            </motion.div>
+          ) : null)}
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-[1400px] px-4 pb-8 md:px-6 lg:px-12">
+        <div className="grid overflow-hidden rounded-lg bg-[#211913] text-white md:grid-cols-[1.1fr_0.9fr]">
+          <div className="px-6 py-10 md:px-10 md:py-14"><p className="mb-3 text-xs font-semibold uppercase tracking-[0.24em] text-[#e4cf8f]">Virtual try-on</p><h2 className="font-display max-w-xl text-3xl font-normal leading-tight md:text-5xl">Bring the piece closer before you decide.</h2><p className="mt-5 max-w-md text-sm leading-6 text-white/68">Preview eligible pieces live on the kiosk, then add the chosen design to the customer order.</p><Link href="/store-manager/try-on" className="metal-sheen mt-8 inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold text-[#17120b] transition-transform hover:scale-[1.02]"><Sparkles className="h-4 w-4" /> Open Try-On</Link></div>
+          <div className="relative aspect-[16/10] overflow-hidden sm:aspect-[16/9] md:aspect-auto md:min-h-[320px]">{(products.find((product) => product.hasTryon) ?? products[0]) ? <ProductImage product={(products.find((product) => product.hasTryon) ?? products[0])!} className="absolute inset-0 h-full w-full object-cover" /> : <div className="h-full min-h-72 bg-[#2a1f15]" />}</div>
+        </div>
+      </section>
+
+      {more.length > 0 ? (
+        <section className="mx-auto max-w-[1400px] px-4 py-14 md:px-6 md:py-20 lg:px-12"><SectionHeading eyebrow="Discover" title="More to explore" /><div className="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-6 xl:grid-cols-4">{more.map((product, index) => <ProductCard key={product.id} product={product} index={index} />)}</div></section>
+      ) : null}
     </div>
   );
 }
 
-function MiniCard({ p, dark }: { p: Product; dark?: boolean }) {
-  const img = primary(p);
-  return (
-    <Link href="/store-manager/kiosk" className="group block overflow-hidden rounded-lg bg-[#FBF9F5] ring-1 ring-black/5 transition-all hover:-translate-y-1 hover:shadow-[0_18px_40px_rgba(31,24,15,0.16)]">
-      <div className="relative aspect-[3/4] overflow-hidden bg-[#ece5da]">
-        {img ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={img} alt={p.name} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" />
-        ) : null}
-        {p.hasTryon && <span className="metal-sheen absolute right-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-bold text-[#17120b]"><Sparkles className="mr-0.5 inline h-2.5 w-2.5" />AR</span>}
-        <span className="absolute bottom-2 right-2 inline-flex items-center gap-0.5 rounded-full bg-[#f7fff8]/90 px-1.5 py-0.5 text-[9px] font-semibold text-[#15803D]"><Award className="h-2.5 w-2.5" />BIS</span>
-      </div>
-      <div className="p-3">
-        <p className="truncate text-sm font-semibold text-[#1f1a14] group-hover:text-primary">{titleCaseName(p.name)}</p>
-        <p className="truncate text-xs text-[#6f675e]">{productMetaLine({ category: p.category, subCategory: p.subCategory, purity: p.purity, weight: p.weightGrams })}</p>
-      </div>
-    </Link>
-  );
+function SectionHeading({ eyebrow, title, action, href, dark }: { eyebrow: string; title: string; action?: string; href?: string; dark?: boolean }) {
+  return <div className="mb-8 flex items-end justify-between gap-6"><div><p className={`mb-2 text-xs font-semibold uppercase tracking-[0.24em] ${dark ? 'text-[#e4cf8f]' : 'text-[#b68a3e]'}`}>{eyebrow}</p><h2 className="font-display text-3xl font-normal md:text-5xl">{title}</h2></div>{action && href ? <Link href={href} className={`luxury-link-underline hidden text-sm font-semibold sm:inline-flex ${dark ? 'text-white/65 hover:text-white' : 'text-[#746b62] hover:text-[#211c17]'}`}>{action}</Link> : null}</div>;
+}
+
+function CollectionTile({ product, large, index }: { product: Product; large?: boolean; index: number }) {
+  return <motion.div initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '-80px' }} transition={{ delay: index * 0.08, duration: 0.5 }} className={`group relative cursor-pointer overflow-hidden rounded-lg ${large ? 'min-h-[420px] md:col-span-3' : 'min-h-[200px]'}`}><ProductImage product={product} className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" /><div className="absolute inset-0 bg-black/40" /><Link href={`/store-manager/kiosk?category=${encodeURIComponent(product.category ?? '')}`} className="absolute inset-0 flex flex-col justify-end p-6 md:p-8"><span className="mb-3 text-xs font-semibold uppercase tracking-[0.24em] text-[#e4cf8f]">{large ? 'Featured' : 'Collection'}</span><span className={`font-display font-normal text-white ${large ? 'text-3xl md:text-4xl' : 'text-2xl'}`}>{product.category}</span><span className="mt-4 inline-flex items-center gap-2 text-xs font-semibold text-[#e4cf8f] opacity-0 transition-all group-hover:translate-x-1 group-hover:opacity-100">Explore <ArrowRight className="h-3 w-3" /></span></Link></motion.div>;
+}
+
+function ProductCard({ product, index, dark }: { product: Product; index: number; dark?: boolean }) {
+  return <motion.article initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '-40px' }} transition={{ delay: index * 0.04, duration: 0.4 }} className="group"><Link href="/store-manager/kiosk" className="block"><div className="relative aspect-[3/4] overflow-hidden rounded-lg bg-[#ece5da] shadow-[0_1px_0_rgba(25,21,17,0.08)] ring-1 ring-black/5 transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-[0_18px_40px_rgba(31,24,15,0.16)]"><ProductImage product={product} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" /><div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/50 to-transparent" />{product.hasTryon ? <span className="metal-sheen absolute right-3 top-3 rounded-full px-2 py-0.5 text-[10px] font-semibold text-[#1a1208]">AR</span> : null}<span className="absolute bottom-3 right-3 flex items-center gap-1 rounded-full bg-[#f7fff8]/90 px-1.5 py-0.5 text-[9px] font-semibold text-[#15803d]"><Award className="h-2.5 w-2.5" /> BIS</span></div><div className="mt-3 space-y-1.5"><p className={`line-clamp-1 text-sm font-semibold ${dark ? 'text-white' : 'text-[#211c17]'}`}>{titleCaseName(product.name)}</p><p className={`truncate text-xs ${dark ? 'text-white/60' : 'text-[#746b62]'}`}>{productMetaLine({ category: product.category, subCategory: product.subCategory, purity: product.purity, weight: product.weightGrams })}</p></div></Link></motion.article>;
+}
+
+function ProductImage({ product, className }: { product: Product; className: string }) {
+  const source = primary(product);
+  return source ? <img src={source} alt={product.name} className={className} /> : null; // eslint-disable-line @next/next/no-img-element
+}
+
+function FloatingProduct({ product, className }: { product: Product; className: string }) {
+  return <ProductImage product={product} className={`${className} object-contain`} />;
+}
+
+function LoadingGrid() {
+  return <div className="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-6 xl:grid-cols-4">{Array.from({ length: 4 }).map((_, index) => <div key={index} className="aspect-[3/4] animate-pulse rounded-lg bg-white/10" />)}</div>;
 }

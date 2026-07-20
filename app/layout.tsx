@@ -12,7 +12,7 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: {
     default: 'Jewel Factory',
-    template: '%s \\ Jewel Factory',
+    template: '%s | Jewel Factory',
   },
   description:
     'Premium jewellery with AI-powered visual search and virtual try-on. Powered by Jewel Factory.',

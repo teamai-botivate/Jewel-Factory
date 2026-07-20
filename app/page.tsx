@@ -1,12 +1,24 @@
 'use client';
 
-import { ArrowRight, Gem, Sparkles, ShieldCheck, Building2, Search, Menu, X } from 'lucide-react';
+import { ArrowRight, Gem, Sparkles, ShieldCheck, Building2, Search, X, Award, Camera } from 'lucide-react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
+import { motion } from 'motion/react';
 import { useEffect, useState } from 'react';
 
-import { LoginModal } from '@/components/landing/LoginModal';
-import { RegisterPromptModal } from '@/components/landing/RegisterPromptModal';
+import { PublicFooter } from '@/components/landing/PublicFooter';
+import { PublicNav } from '@/components/landing/PublicNav';
+import { useDocumentIdentity } from '@/hooks/use-document-identity';
 import { titleCaseName, formatWeight } from '@/lib/format';
+
+const LoginModal = dynamic(
+  () => import('@/components/landing/LoginModal').then((module) => module.LoginModal),
+  { ssr: false },
+);
+const RegisterPromptModal = dynamic(
+  () => import('@/components/landing/RegisterPromptModal').then((module) => module.RegisterPromptModal),
+  { ssr: false },
+);
 
 type ShowcaseProduct = {
   id: string; designNumber?: string; name: string;
@@ -24,13 +36,23 @@ const FEATURES = [
   { icon: Building2, title: 'Multi-store ready', desc: 'One retailer, many stores — approvals, restock and orders tracked end to end.' },
 ];
 
+const TRUST = [
+  { icon: ShieldCheck, label: 'BIS Hallmarked' },
+  { icon: Award, label: 'Certified Jewellers' },
+  { icon: Camera, label: 'Virtual Try-On' },
+  { icon: Search, label: 'Similar-design search' },
+];
+
+const primaryImg = (p: ShowcaseProduct) => (p.images.find((i) => i.isPrimary) ?? p.images[0])?.secureUrl;
+
 export default function LandingPage() {
   const [showcase, setShowcase] = useState<ShowcaseProduct[] | null>(null);
   const [showLogin, setShowLogin] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
   const [detail, setDetail] = useState<ShowcaseProduct | null>(null);
   const [detailImg, setDetailImg] = useState(0);
   const [zoom, setZoom] = useState<string | null>(null);
+
+  useDocumentIdentity('Home');
 
   useEffect(() => {
     (async () => {
@@ -42,74 +64,100 @@ export default function LandingPage() {
     })();
   }, []);
 
+  // A few real catalog pieces to "float" in the hero (desktop only).
+  const floats = (showcase ?? []).filter(primaryImg).slice(0, 3);
+
   return (
     <div className="min-h-screen">
-      {/* Navbar */}
-      <header className="sticky top-0 z-40 border-b border-black/5 bg-background/85 backdrop-blur">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
-          <Link href="/" className="font-display text-xl font-medium tracking-[0.15em] text-foreground">
-            JEWEL <span className="text-[#c9a84c]">FACTORY</span>
-          </Link>
+      {/* ── Navbar (shared public nav) ────────────────────────────────────── */}
+      <PublicNav catalogHref="#showcase" />
 
-          <nav className="hidden items-center gap-6 md:flex">
-            <a href="#showcase" className="text-sm text-foreground/80 hover:text-foreground">Catalog</a>
-            <Link href="/about" className="text-sm text-foreground/80 hover:text-foreground">About</Link>
-            <button onClick={() => setShowLogin(true)} className="text-sm text-foreground/80 hover:text-foreground">Login</button>
-            <Link href="/store/register" className="metal-sheen rounded-full px-4 py-2 text-sm font-semibold text-[#17120b]">
-              Register here
-            </Link>
-          </nav>
+      {/* ── Hero (light & elegant: gold glow + monogram accent + floating pieces) ── */}
+      <section className="relative overflow-hidden">
+        {/* Soft gold radial glow */}
+        <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(60rem_40rem_at_15%_-10%,rgba(201,168,76,0.16),transparent_60%),radial-gradient(50rem_30rem_at_100%_10%,rgba(201,168,76,0.10),transparent_55%)]" />
+        {/* Faint JF monogram watermark (desktop) */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/JF.avif" alt="" aria-hidden className="pointer-events-none absolute right-[-4%] top-[6%] -z-10 hidden w-[38rem] max-w-none opacity-[0.05] lg:block" />
 
-          <button className="md:hidden" onClick={() => setMenuOpen((v) => !v)} aria-label="Menu">
-            {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </button>
-        </div>
-        {menuOpen && (
-          <div className="border-t border-black/5 bg-background px-4 py-3 md:hidden">
-            <div className="flex flex-col gap-3">
-              <a href="#showcase" onClick={() => setMenuOpen(false)} className="text-sm">Catalog</a>
-              <Link href="/about" onClick={() => setMenuOpen(false)} className="text-sm">About</Link>
-              <button onClick={() => { setMenuOpen(false); setShowLogin(true); }} className="text-left text-sm">Login</button>
-              <Link href="/store/register" onClick={() => setMenuOpen(false)} className="metal-sheen inline-block rounded-full px-4 py-2 text-center text-sm font-semibold text-[#17120b]">
+        <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-16 sm:px-6 sm:py-24 lg:grid-cols-[1.05fr_0.95fr] lg:py-28">
+          {/* Copy */}
+          <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="text-center lg:text-left">
+            <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.28em] text-[#a0824a]">
+              <Sparkles className="h-3.5 w-3.5" /> Intelligent gold jewellery
+            </p>
+            <h1 className="mx-auto mt-4 max-w-xl font-display text-4xl font-normal leading-[1.05] tracking-tight text-balance sm:text-5xl md:text-6xl lg:mx-0">
+              Welcome to <span className="text-[#c9a84c]">Jewel Factory</span>
+            </h1>
+            <p className="mx-auto mt-5 max-w-xl text-base leading-7 text-muted-foreground lg:mx-0">
+              The B2B platform connecting a gold-jewellery manufacturer to its retailer
+              network and their in-store customers — catalog, AR try-on, orders and
+              approvals, all in one place.
+            </p>
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-3 lg:justify-start">
+              <button onClick={() => setShowLogin(true)} className="metal-sheen inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold text-[#17120b] shadow-lg shadow-black/10 transition-transform hover:scale-[1.02]">
+                Login <ArrowRight className="h-4 w-4" />
+              </button>
+              <Link href="/store/register" className="inline-flex items-center gap-2 rounded-full border border-primary/40 px-6 py-3 text-sm font-semibold text-primary transition-colors hover:bg-primary/5">
                 Register here
               </Link>
             </div>
-          </div>
-        )}
-      </header>
+            {/* Trust chips */}
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-muted-foreground lg:justify-start">
+              {TRUST.map(({ icon: Icon, label }) => (
+                <span key={label} className="inline-flex items-center gap-1.5"><Icon className="h-3.5 w-3.5 text-[#b68a3e]" />{label}</span>
+              ))}
+            </div>
+          </motion.div>
 
-      {/* Hero */}
-      <section className="relative overflow-hidden">
-        <div className="mx-auto max-w-6xl px-4 py-16 text-center sm:px-6 sm:py-28">
-          <p className="text-xs font-semibold uppercase tracking-widest text-[#a0824a]">
-            Intelligent gold jewellery — made for you
-          </p>
-          <h1 className="mx-auto mt-4 max-w-3xl font-display text-4xl font-normal tracking-tight text-balance sm:text-6xl">
-            Welcome to Jewel Factory
-          </h1>
-          <p className="mx-auto mt-5 max-w-xl text-base text-muted-foreground">
-            The B2B platform that connects a gold-jewellery manufacturer to its
-            retailer network and their in-store customers — catalog, AR try-on,
-            orders and approvals, all in one place.
-          </p>
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            <button onClick={() => setShowLogin(true)} className="metal-sheen inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold text-[#17120b]">
-              Login <ArrowRight className="h-4 w-4" />
-            </button>
-            <Link href="/store/register" className="inline-flex items-center gap-2 rounded-full border border-primary/40 px-6 py-3 text-sm font-semibold text-primary hover:bg-primary/5">
-              Register here
-            </Link>
+          {/* Visual — floating real catalog pieces (desktop), stacked collage (mobile) */}
+          <div className="relative hidden h-[26rem] lg:block">
+            {floats[0] && (
+              <motion.button
+                initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, duration: 0.5 }}
+                onClick={() => { setDetail(floats[0]!); setDetailImg(0); }}
+                className="group absolute left-[6%] top-0 h-[62%] w-[46%] overflow-hidden rounded-2xl bg-[#ece5da] shadow-[0_34px_70px_rgba(31,24,15,0.28)] ring-1 ring-black/5"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={primaryImg(floats[0])} alt={floats[0].name} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" />
+              </motion.button>
+            )}
+            {floats[1] && (
+              <motion.button
+                initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, duration: 0.5 }}
+                onClick={() => { setDetail(floats[1]!); setDetailImg(0); }}
+                className="group absolute right-[4%] top-[14%] h-[52%] w-[40%] overflow-hidden rounded-2xl bg-[#ece5da] shadow-[0_28px_56px_rgba(31,24,15,0.24)] ring-1 ring-black/5"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={primaryImg(floats[1])} alt={floats[1].name} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" />
+              </motion.button>
+            )}
+            {floats[2] && (
+              <motion.button
+                initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, duration: 0.5 }}
+                onClick={() => { setDetail(floats[2]!); setDetailImg(0); }}
+                className="group absolute bottom-0 left-[26%] h-[46%] w-[44%] overflow-hidden rounded-2xl bg-[#ece5da] shadow-[0_28px_56px_rgba(31,24,15,0.24)] ring-1 ring-black/5"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={primaryImg(floats[2])} alt={floats[2].name} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" />
+              </motion.button>
+            )}
+            {floats.length === 0 && (
+              <div className="flex h-full items-center justify-center rounded-2xl border border-dashed border-primary/20 text-primary/30">
+                <Gem className="h-16 w-16" />
+              </div>
+            )}
           </div>
         </div>
       </section>
 
-      {/* Featured showcase (real catalog, no price) */}
-      <section id="showcase" className="border-t border-black/5 bg-[#fbf9f5]/60">
-        <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
-          <div className="mb-8 text-center">
-            <p className="text-xs font-semibold uppercase tracking-widest text-[#a0824a]">Featured designs</p>
-            <h2 className="mt-2 font-display text-3xl font-normal tracking-tight">A glimpse of the collection</h2>
-            <p className="mt-2 text-sm text-muted-foreground">Register or sign in to browse the full catalog and place orders.</p>
+      {/* ── Featured showcase (real catalog, no price) ────────────────────── */}
+      <section id="showcase" className="scroll-mt-20 border-t border-black/5 bg-[#fbf9f5]/70">
+        <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
+          <div className="mb-10 text-center">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#a0824a]">Featured designs</p>
+            <h2 className="mt-2 font-display text-3xl font-normal tracking-tight sm:text-4xl">A glimpse of the collection</h2>
+            <p className="mt-3 text-sm text-muted-foreground">Register or sign in to browse the full catalog and place orders.</p>
           </div>
 
           {showcase === null ? (
@@ -122,14 +170,20 @@ export default function LandingPage() {
             <p className="text-center text-sm text-muted-foreground">Catalog coming soon.</p>
           ) : (
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-              {showcase.map((p) => {
-                const img = p.images.find((i) => i.isPrimary) ?? p.images[0];
+              {showcase.map((p, i) => {
+                const img = primaryImg(p);
                 return (
-                  <button key={p.id} type="button" onClick={() => { setDetail(p); setDetailImg(0); }} className="group overflow-hidden rounded-xl border bg-card text-left transition-shadow hover:shadow-md" title="View details">
-                    <div className="relative aspect-[3/4] bg-[#ece5da]">
+                  <motion.button
+                    key={p.id} type="button"
+                    initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '-60px' }} transition={{ delay: (i % 4) * 0.05, duration: 0.4 }}
+                    onClick={() => { setDetail(p); setDetailImg(0); }}
+                    className="group overflow-hidden rounded-xl border bg-card text-left shadow-sm transition-all hover:-translate-y-1 hover:shadow-[0_18px_40px_rgba(31,24,15,0.16)]"
+                    title="View details"
+                  >
+                    <div className="relative aspect-[3/4] overflow-hidden bg-[#ece5da]">
                       {img ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={img.secureUrl} alt={p.name} className="h-full w-full object-cover transition-transform group-hover:scale-105" />
+                        <img src={img} alt={p.name} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" />
                       ) : <div className="flex h-full items-center justify-center text-muted-foreground/40"><Gem className="h-8 w-8" /></div>}
                       {p.hasTryon && (
                         <span className="metal-sheen absolute right-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-bold text-[#17120b]">
@@ -138,65 +192,57 @@ export default function LandingPage() {
                       )}
                     </div>
                     <div className="p-3">
-                      <p className="truncate text-sm font-medium group-hover:text-primary">{p.name}</p>
+                      <p className="truncate text-sm font-medium group-hover:text-primary">{titleCaseName(p.name)}</p>
                       {p.category && <p className="truncate text-xs text-muted-foreground">{p.category}</p>}
                     </div>
-                  </button>
+                  </motion.button>
                 );
               })}
             </div>
           )}
 
-          <div className="mt-10 text-center">
-            <Link href="/store/register" className="metal-sheen inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold text-[#17120b]">
+          <div className="mt-12 text-center">
+            <Link href="/store/register" className="metal-sheen inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold text-[#17120b] shadow-sm transition-transform hover:scale-[1.02]">
               See the full catalog — Register <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
         </div>
       </section>
 
-      {/* Why Jewel Factory */}
+      {/* ── Why Jewel Factory ─────────────────────────────────────────────── */}
       <section className="border-t border-black/5">
-        <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
-          <div className="mb-10 text-center">
-            <p className="text-xs font-semibold uppercase tracking-widest text-[#a0824a]">Why Jewel Factory</p>
-            <h2 className="mt-2 font-display text-3xl font-normal tracking-tight">Built for gold jewellery, end to end</h2>
+        <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
+          <div className="mb-12 text-center">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#a0824a]">Why Jewel Factory</p>
+            <h2 className="mt-2 font-display text-3xl font-normal tracking-tight sm:text-4xl">Built for gold jewellery, end to end</h2>
           </div>
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-            {FEATURES.map(({ icon: Icon, title, desc }) => (
-              <div key={title} className="rounded-xl border bg-card p-5">
-                <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {FEATURES.map(({ icon: Icon, title, desc }, i) => (
+              <motion.div
+                key={title}
+                initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '-60px' }} transition={{ delay: (i % 3) * 0.06, duration: 0.4 }}
+                className="rounded-2xl border bg-card p-6 shadow-sm transition-shadow hover:shadow-md"
+              >
+                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
                   <Icon className="h-5 w-5" />
                 </span>
-                <p className="mt-3 text-sm font-semibold">{title}</p>
-                <p className="mt-1 text-sm text-muted-foreground">{desc}</p>
-              </div>
+                <p className="mt-4 text-base font-semibold">{title}</p>
+                <p className="mt-1.5 text-sm leading-6 text-muted-foreground">{desc}</p>
+              </motion.div>
             ))}
           </div>
-          <div className="mt-10 text-center">
+          <div className="mt-12 text-center">
             <Link href="/about" className="luxury-link-underline text-sm font-medium text-primary">Learn how it works →</Link>
           </div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-black/5 bg-[#fbf9f5]/60">
-        <div className="mx-auto flex max-w-6xl flex-col items-center gap-2 px-4 py-8 text-center sm:px-6">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-            <span className="text-[#C9A84C]">Jewel</span> Factory
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-4 text-sm text-muted-foreground">
-            <Link href="/about" className="hover:text-foreground">About</Link>
-            <button onClick={() => setShowLogin(true)} className="hover:text-foreground">Login</button>
-            <Link href="/store/register" className="hover:text-foreground">Register</Link>
-          </div>
-          <p className="mt-2 text-xs text-muted-foreground">Powered by Jewel Factory</p>
-        </div>
-      </footer>
+      {/* ── Footer (shared platform footer) ───────────────────────────────── */}
+      <PublicFooter onLogin={() => setShowLogin(true)} />
 
-      {/* Product detail modal (public — ends with a Register/Login CTA) */}
+      {/* ── Product detail modal (public — ends with a Register/Login CTA) ── */}
       {detail && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 py-8" onClick={() => setDetail(null)}>
+        <div className="fixed inset-0 z-50 flex min-h-full items-center justify-center overflow-y-auto bg-black/50 p-4 py-8" onClick={() => setDetail(null)}>
           <div className="relative w-full max-w-3xl rounded-2xl bg-card shadow-xl" onClick={(e) => e.stopPropagation()}>
             <button onClick={() => setDetail(null)} aria-label="Close" className="absolute right-3 top-3 z-20 rounded-full bg-black/60 p-1.5 text-white hover:bg-black/80"><X className="h-4 w-4" /></button>
             <div className="grid md:grid-cols-2">

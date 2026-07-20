@@ -1,6 +1,6 @@
 'use client';
 
-import { Package, ShoppingBag, Users, ClipboardCheck, Store as StoreIcon, Loader2 } from 'lucide-react';
+import { ArrowRight, Package, ShoppingBag, Users, ClipboardCheck, Store as StoreIcon, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
@@ -33,14 +33,14 @@ const STATUS_COLORS: Record<string, string> = {
 function Stat({ label, value, icon: Icon, href }: { label: string; value: number; icon: typeof Package; href: string }) {
   return (
     <Link href={href}>
-      <div className="rounded-xl border bg-card p-4 transition-colors hover:border-primary/40">
+      <div className="group rounded-2xl border border-[#e5dfd6] bg-white p-5 shadow-[0_8px_30px_rgba(52,42,30,0.035)] transition-all hover:-translate-y-0.5 hover:border-[#d9c69d] hover:shadow-[0_12px_34px_rgba(52,42,30,0.07)]">
         <div className="flex items-center justify-between">
-          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{label}</p>
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <p className="max-w-[120px] text-[10px] font-bold uppercase tracking-[0.12em] text-[#8e847a]">{label}</p>
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#fbf6ea] text-[#a77d31]">
             <Icon className="h-4 w-4" />
           </div>
         </div>
-        <p className="mt-2 text-2xl font-semibold tabular-nums">{value}</p>
+        <div className="mt-5 flex items-end justify-between"><p className="text-3xl font-semibold tabular-nums tracking-tight">{value}</p><ArrowRight className="mb-1 h-3.5 w-3.5 text-[#aaa096] transition-transform group-hover:translate-x-1" /></div>
       </div>
     </Link>
   );
@@ -65,10 +65,16 @@ export default function ManufacturerDashboardPage() {
   }, []);
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-5">
-      <div>
-        <h1 className="text-2xl font-medium tracking-tight">Dashboard</h1>
-        <p className="mt-0.5 text-sm text-muted-foreground">Overview of your catalog, orders and retailers.</p>
+    <div className="mx-auto w-full max-w-6xl space-y-7">
+      <div className="flex flex-wrap items-end justify-between gap-4 border-b border-[#e6e0d7] pb-6">
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.17em] text-[#9a7229]">Manufacturing operations</p>
+          <h1 className="mt-2 text-3xl font-semibold tracking-[-0.025em]">Dashboard</h1>
+          <p className="mt-1.5 text-sm text-muted-foreground">Catalog health, open work, and retailer activity.</p>
+        </div>
+        <Link href="/manufacturer/catalog/new" className="inline-flex items-center gap-2 rounded-xl bg-[#c99d37] px-4 py-2.5 text-sm font-semibold text-white shadow-[0_7px_20px_rgba(174,127,30,0.2)] transition-colors hover:bg-[#b98e30]">
+          Add design <ArrowRight className="h-4 w-4" />
+        </Link>
       </div>
 
       {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
@@ -81,7 +87,7 @@ export default function ManufacturerDashboardPage() {
 
       {data && (
         <>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
             <Stat label="Total Designs" value={data.totalDesigns} icon={Package} href="/manufacturer/catalog" />
             <Stat label="Active" value={data.activeDesigns} icon={Package} href="/manufacturer/catalog" />
             <Stat label="B2B Pending" value={data.pendingB2b} icon={ShoppingBag} href="/manufacturer/orders" />
@@ -90,10 +96,10 @@ export default function ManufacturerDashboardPage() {
             <Stat label="Active Retailers" value={data.activeStores} icon={StoreIcon} href="/manufacturer/stores" />
           </div>
 
-          <div className="rounded-xl border bg-card overflow-hidden">
-            <div className="flex items-center justify-between border-b bg-muted/40 px-4 py-3">
-              <p className="text-sm font-medium">Recent B2B Orders</p>
-              <Link href="/manufacturer/orders" className="text-xs text-primary hover:underline">View all</Link>
+          <div className="overflow-hidden rounded-2xl border border-[#e5dfd6] bg-white shadow-[0_8px_30px_rgba(52,42,30,0.035)]">
+            <div className="flex items-center justify-between border-b border-[#ece6dd] px-5 py-4">
+              <div><p className="text-sm font-semibold">Recent B2B orders</p><p className="mt-0.5 text-xs text-muted-foreground">Latest restock activity from the retailer network.</p></div>
+              <Link href="/manufacturer/orders" className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#946d28] hover:text-[#75531c]">View all <ArrowRight className="h-3.5 w-3.5" /></Link>
             </div>
             {data.recentB2b.length === 0 ? (
               <p className="px-4 py-8 text-center text-sm text-muted-foreground">No orders yet.</p>
@@ -101,7 +107,7 @@ export default function ManufacturerDashboardPage() {
               <div className="divide-y">
                 {data.recentB2b.map((o) => (
                   <Link key={o.id} href={`/manufacturer/orders/${o.id}`}>
-                    <div className="flex items-center justify-between px-4 py-3 hover:bg-muted/40 transition-colors">
+                    <div className="flex items-center justify-between px-5 py-3.5 transition-colors hover:bg-[#faf7f1]">
                       <div>
                         <p className="text-sm font-medium">{o.orderNumber}</p>
                         <p className="text-xs text-muted-foreground">
