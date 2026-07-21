@@ -14,12 +14,13 @@ import {
   Users,
 } from 'lucide-react';
 import Link from 'next/link';
+import type { ReactNode } from 'react';
 
 import { StaffLoginForm } from '@/components/auth/StaffLoginForm';
 import { Wordmark } from '@/components/landing/Wordmark';
 import { useDocumentIdentity } from '@/hooks/use-document-identity';
 
-type PortalKind = 'retailer' | 'manager' | 'manufacturer';
+type PortalKind = 'retailer' | 'manager' | 'manufacturer' | 'retailer-registration';
 
 const portalContent = {
   retailer: {
@@ -29,6 +30,9 @@ const portalContent = {
     loginTitle: 'Retailer sign in',
     loginDescription: 'Access your head-office workspace and connected stores.',
     accessLabel: 'Retailer access',
+    documentTitle: 'Retailer sign in',
+    leftFooter: 'Secure, authorized access only',
+    rightFooter: 'Your credentials are used only to access this protected workspace.',
     icon: Store,
     features: [
       { icon: Building2, text: 'Keep branches and teams connected' },
@@ -43,6 +47,9 @@ const portalContent = {
     loginTitle: 'Store Manager sign in',
     loginDescription: 'Use the account created for your assigned store.',
     accessLabel: 'Store team access',
+    documentTitle: 'Store Manager sign in',
+    leftFooter: 'Secure, authorized access only',
+    rightFooter: 'Your credentials are used only to access this protected workspace.',
     icon: Users,
     features: [
       { icon: Search, text: 'Assist customers with visual discovery' },
@@ -57,11 +64,31 @@ const portalContent = {
     loginTitle: 'Manufacturer sign in',
     loginDescription: 'Use your Jewel Factory administrator credentials to continue.',
     accessLabel: 'Private access',
+    documentTitle: 'Manufacturer sign in',
+    leftFooter: 'Secure, authorized access only',
+    rightFooter: 'Your credentials are used only to access this protected workspace.',
     icon: Factory,
     features: [
       { icon: Boxes, text: 'Manage the master jewellery catalog' },
       { icon: ClipboardCheck, text: 'Review retailer registrations' },
       { icon: Truck, text: 'Track production and fulfilment' },
+    ],
+  },
+  'retailer-registration': {
+    eyebrow: 'Retailer partnership',
+    title: 'Join the Jewel Factory network.',
+    description: 'Share your Head Office details, delivery address, and first store manager for review.',
+    loginTitle: 'Start your application',
+    loginDescription: 'Three short steps. Your progress stays here as you continue.',
+    accessLabel: 'Retailer application',
+    documentTitle: 'Retailer Registration',
+    leftFooter: 'Submitted securely for manufacturer review',
+    rightFooter: 'Your application details remain private while the manufacturer reviews them.',
+    icon: Store,
+    features: [
+      { icon: Building2, text: 'Share your business and delivery details' },
+      { icon: ClipboardCheck, text: 'Submit once for manufacturer review' },
+      { icon: Users, text: 'Create your first store manager account' },
     ],
   },
 } as const;
@@ -72,24 +99,30 @@ export function PortalLoginScreen({
   redirectTo,
   forgotHref,
   footerLinks = [],
+  children,
+  backHref = '/',
+  backLabel = 'Back to Jewel Factory',
 }: {
   portal: PortalKind;
-  loginPath: string;
-  redirectTo: string;
+  loginPath?: string;
+  redirectTo?: string;
   forgotHref?: string;
   footerLinks?: Array<{ label: string; prompt?: string; href: string }>;
+  children?: ReactNode;
+  backHref?: string;
+  backLabel?: string;
 }) {
   const content = portalContent[portal];
   const PortalIcon = content.icon;
 
-  useDocumentIdentity(content.loginTitle);
+  useDocumentIdentity(content.documentTitle);
 
   return (
-    <main className="relative min-h-dvh overflow-hidden bg-[#f4f0e8] px-3 py-3 text-[#28231e] sm:px-5 sm:py-5 lg:px-8 lg:py-7">
+    <main className="relative h-dvh overflow-hidden bg-[#f4f0e8] px-3 py-3 text-[#28231e] sm:px-5 sm:py-5 lg:px-8 lg:py-7">
       <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_12%_12%,rgba(206,166,72,0.18),transparent_30rem),radial-gradient(circle_at_90%_88%,rgba(128,99,49,0.08),transparent_28rem)]" />
 
-      <div className="relative mx-auto grid min-h-[calc(100dvh-1.5rem)] w-full max-w-[1240px] overflow-hidden rounded-[26px] border border-[#ded6ca] bg-white shadow-[0_28px_90px_rgba(62,48,29,0.12)] sm:min-h-[calc(100dvh-2.5rem)] md:grid-cols-[0.88fr_1.12fr] lg:min-h-[calc(100dvh-3.5rem)]">
-        <section className="relative hidden min-h-full flex-col justify-between overflow-hidden border-r border-[#ded6ca] bg-[#211c17] p-8 text-[#faf7f0] md:flex lg:p-12">
+      <div className="relative mx-auto grid h-[calc(100dvh-1.5rem)] w-full max-w-[1240px] overflow-hidden rounded-[26px] border border-[#ded6ca] bg-white shadow-[0_28px_90px_rgba(62,48,29,0.12)] sm:h-[calc(100dvh-2.5rem)] md:grid-cols-[0.88fr_1.12fr] lg:h-[calc(100dvh-3.5rem)]">
+        <section className="relative hidden h-full min-h-0 flex-col justify-between overflow-hidden border-r border-[#ded6ca] bg-[#211c17] p-8 text-[#faf7f0] md:flex lg:p-12">
           <div aria-hidden className="absolute -bottom-20 -right-20 h-80 w-80 rotate-12 border border-[#d0a84e]/15" />
           <div aria-hidden className="absolute -bottom-5 -right-5 h-52 w-52 rotate-12 border border-[#d0a84e]/15" />
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -118,20 +151,21 @@ export function PortalLoginScreen({
           </div>
 
           <p className="relative z-10 flex items-center gap-2 text-xs text-[#aaa196]">
-            <ShieldCheck className="h-4 w-4 text-[#d2aa4e]" /> Secure, authorized access only
+            <ShieldCheck className="h-4 w-4 text-[#d2aa4e]" /> {content.leftFooter}
           </p>
         </section>
 
-        <section className="relative flex min-h-full flex-col bg-[#fffdf9]">
-          <div className="flex items-center justify-between border-b border-[#ebe5dc] px-5 py-4 md:justify-end md:px-8">
+        <section className="relative flex h-full min-h-0 flex-col overflow-hidden bg-[#fffdf9]">
+          <div className="flex shrink-0 items-center justify-between border-b border-[#ebe5dc] px-5 py-4 md:justify-end md:px-8">
             <Wordmark href="/" size="sm" className="md:hidden" />
-            <Link href="/" className="inline-flex min-h-10 items-center gap-2 rounded-full px-3 text-xs font-medium text-[#71685f] transition-colors hover:bg-[#f4efe6] hover:text-[#29231e] sm:text-sm">
-              <ArrowLeft className="h-4 w-4" /> <span className="hidden min-[360px]:inline">Back to Jewel Factory</span><span className="min-[360px]:hidden">Home</span>
+            <Link href={backHref} className="inline-flex min-h-10 items-center gap-2 rounded-full px-3 text-xs font-medium text-[#71685f] transition-colors hover:bg-[#f4efe6] hover:text-[#29231e] sm:text-sm">
+              <ArrowLeft className="h-4 w-4" /> <span className="hidden min-[360px]:inline">{backLabel}</span><span className="min-[360px]:hidden">Back</span>
             </Link>
           </div>
 
-          <div className="flex flex-1 items-center justify-center px-5 py-9 sm:px-9 sm:py-12 lg:px-16">
-            <div className="w-full max-w-[440px]">
+          <div className={`min-h-0 flex-1 overflow-y-auto overscroll-contain [scrollbar-gutter:stable] ${children ? '' : 'flex items-center'}`}>
+            <div className="flex min-h-full justify-center px-5 py-8 sm:px-9 sm:py-10 lg:px-16 lg:py-12">
+            <div className={`w-full ${children ? 'max-w-[640px]' : 'max-w-[440px] self-center'}`}>
               <div className="mb-7 flex items-center gap-3 md:hidden">
                 <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#cfa33e] text-[#241e17]"><PortalIcon className="h-[18px] w-[18px]" /></span>
                 <div>
@@ -146,23 +180,28 @@ export function PortalLoginScreen({
               <h2 className="mt-5 font-display text-[clamp(1.75rem,3.5vw,2.25rem)] font-medium leading-tight tracking-[-0.015em]">{content.loginTitle}</h2>
               <p className="mt-2 max-w-md text-sm leading-6 text-[#756c63]">{content.loginDescription}</p>
 
-              <div className="mt-7 border-y border-[#e8e0d5] py-6 sm:py-7">
-                <StaffLoginForm
-                  bare
-                  showLabels
-                  title=""
-                  subtitle=""
-                  loginPath={loginPath}
-                  redirectTo={redirectTo}
-                  forgotHref={forgotHref}
-                  footerLinks={footerLinks}
-                />
-              </div>
+              {children ? (
+                <div className="mt-6">{children}</div>
+              ) : loginPath && redirectTo ? (
+                <div className="mt-7 border-y border-[#e8e0d5] py-6 sm:py-7">
+                  <StaffLoginForm
+                    bare
+                    showLabels
+                    title=""
+                    subtitle=""
+                    loginPath={loginPath}
+                    redirectTo={redirectTo}
+                    forgotHref={forgotHref}
+                    footerLinks={footerLinks}
+                  />
+                </div>
+              ) : null}
 
               <p className="mt-6 flex items-start gap-2 text-xs leading-5 text-[#8a8178]">
                 <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#aa7d2b]" />
-                Your credentials are used only to access this protected workspace.
+                {content.rightFooter}
               </p>
+            </div>
             </div>
           </div>
         </section>
