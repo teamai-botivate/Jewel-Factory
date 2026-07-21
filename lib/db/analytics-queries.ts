@@ -204,7 +204,7 @@ export async function getRetailerBranchSales(
 
   // Get all branches for this retailer
   const branches = await prisma.branch.findMany({
-    where: { storeId },
+    where: { retailerId: storeId },
     select: { id: true, name: true },
   });
 
