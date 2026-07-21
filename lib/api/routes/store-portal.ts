@@ -13,6 +13,8 @@ import {
   resetBranchManagerPassword, deleteBranchManager,
 } from '@/lib/db/branches';
 import { signUpload, storeFolder } from '@/lib/cloudinary';
+import { embedImageBase64, searchByVector } from '@/lib/search';
+import { prisma } from '@/lib/prisma';
 import { sendData, sendError } from '../envelope';
 import { storeGuard, type AppEnv } from '../guards';
 
@@ -49,6 +51,25 @@ storePortalRoutes.post('/branding/logo/sign', storeGuard, async (c) => {
   } catch (err) {
     return sendError(c, 'upstream_failed', err instanceof Error ? err.message : 'Cloudinary not configured', 503);
   }
+});
+
+// ── Visual search (image → similar manufacturer products) ─────────────────────
+storePortalRoutes.post('/search/image', storeGuard, zValidator('json', z.object({ image: z.string().min(1) })), async (c) => {
+  let ids: string[];
+  try {
+    const vector = await embedImageBase64(c.req.valid('json').image);
+    const hits = await searchByVector(vector, 24);
+    ids = hits.map((h) => h.id);
+  } catch (err) {
+    return sendError(c, 'upstream_failed', err instanceof Error ? err.message : 'Visual search is warming up. Please try again.', 503);
+  }
+  if (ids.length === 0) return sendData(c, []);
+  const products = await prisma.manufacturerProduct.findMany({
+    where: { id: { in: ids }, status: 'ACTIVE' },
+    include: { images: { orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }] } },
+  });
+  const byId = new Map(products.map((p) => [p.id, p]));
+  return sendData(c, ids.map((id) => byId.get(id)).filter(Boolean));
 });
 
 // NOTE: Kiosk PIN routes moved to store-ops (managerGuard) so OWNER OR MANAGER
