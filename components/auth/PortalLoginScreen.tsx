@@ -117,6 +117,46 @@ export function PortalLoginScreen({
 
   useDocumentIdentity(content.documentTitle);
 
+  const panelContent = (
+    <div className={`w-full ${children ? 'max-w-[640px]' : 'max-w-[440px]'}`}>
+      <div className="mb-7 flex items-center gap-3 md:hidden">
+        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#cfa33e] text-[#241e17]"><PortalIcon className="h-[18px] w-[18px]" /></span>
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#a2782e]">{content.eyebrow}</p>
+          <p className="mt-0.5 text-xs text-[#81776d]">Secure workspace</p>
+        </div>
+      </div>
+
+      <span className="inline-flex items-center gap-2 rounded-full border border-[#e4d7be] bg-[#fbf5e8] px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.15em] text-[#916a24]">
+        <ShieldCheck className="h-3.5 w-3.5" /> {content.accessLabel}
+      </span>
+      <h2 className="mt-5 font-display text-[clamp(1.75rem,3.5vw,2.25rem)] font-medium leading-tight tracking-[-0.015em]">{content.loginTitle}</h2>
+      <p className="mt-2 max-w-md text-sm leading-6 text-[#756c63]">{content.loginDescription}</p>
+
+      {children ? (
+        <div className="mt-6">{children}</div>
+      ) : loginPath && redirectTo ? (
+        <div className="mt-7 border-y border-[#e8e0d5] py-6 sm:py-7">
+          <StaffLoginForm
+            bare
+            showLabels
+            title=""
+            subtitle=""
+            loginPath={loginPath}
+            redirectTo={redirectTo}
+            forgotHref={forgotHref}
+            footerLinks={footerLinks}
+          />
+        </div>
+      ) : null}
+
+      <p className="mt-6 flex items-start gap-2 text-xs leading-5 text-[#8a8178]">
+        <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#aa7d2b]" />
+        {content.rightFooter}
+      </p>
+    </div>
+  );
+
   return (
     <main className="relative h-dvh overflow-hidden bg-[#f4f0e8] px-3 py-3 text-[#28231e] sm:px-5 sm:py-5 lg:px-8 lg:py-7">
       <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_12%_12%,rgba(206,166,72,0.18),transparent_30rem),radial-gradient(circle_at_90%_88%,rgba(128,99,49,0.08),transparent_28rem)]" />
@@ -163,47 +203,17 @@ export function PortalLoginScreen({
             </Link>
           </div>
 
-          <div className={`min-h-0 flex-1 overflow-y-auto overscroll-contain [scrollbar-gutter:stable] ${children ? '' : 'flex items-center'}`}>
-            <div className="flex min-h-full justify-center px-5 py-8 sm:px-9 sm:py-10 lg:px-16 lg:py-12">
-            <div className={`w-full ${children ? 'max-w-[640px]' : 'max-w-[440px] self-center'}`}>
-              <div className="mb-7 flex items-center gap-3 md:hidden">
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#cfa33e] text-[#241e17]"><PortalIcon className="h-[18px] w-[18px]" /></span>
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#a2782e]">{content.eyebrow}</p>
-                  <p className="mt-0.5 text-xs text-[#81776d]">Secure workspace</p>
-                </div>
+          {children ? (
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain [scrollbar-gutter:stable]">
+              <div className="flex min-h-full justify-center px-5 py-8 sm:px-9 sm:py-10 lg:px-16 lg:py-12">
+                {panelContent}
               </div>
-
-              <span className="inline-flex items-center gap-2 rounded-full border border-[#e4d7be] bg-[#fbf5e8] px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.15em] text-[#916a24]">
-                <ShieldCheck className="h-3.5 w-3.5" /> {content.accessLabel}
-              </span>
-              <h2 className="mt-5 font-display text-[clamp(1.75rem,3.5vw,2.25rem)] font-medium leading-tight tracking-[-0.015em]">{content.loginTitle}</h2>
-              <p className="mt-2 max-w-md text-sm leading-6 text-[#756c63]">{content.loginDescription}</p>
-
-              {children ? (
-                <div className="mt-6">{children}</div>
-              ) : loginPath && redirectTo ? (
-                <div className="mt-7 border-y border-[#e8e0d5] py-6 sm:py-7">
-                  <StaffLoginForm
-                    bare
-                    showLabels
-                    title=""
-                    subtitle=""
-                    loginPath={loginPath}
-                    redirectTo={redirectTo}
-                    forgotHref={forgotHref}
-                    footerLinks={footerLinks}
-                  />
-                </div>
-              ) : null}
-
-              <p className="mt-6 flex items-start gap-2 text-xs leading-5 text-[#8a8178]">
-                <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#aa7d2b]" />
-                {content.rightFooter}
-              </p>
             </div>
+          ) : (
+            <div className="flex flex-1 items-center justify-center px-5 py-9 sm:px-9 sm:py-12 lg:px-16">
+              {panelContent}
             </div>
-          </div>
+          )}
         </section>
       </div>
     </main>
