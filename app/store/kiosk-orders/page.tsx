@@ -3,6 +3,7 @@
 import { Loader2, ShoppingBag, ChevronDown, ChevronUp } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
+import { ImageZoomModal } from '@/components/orders/ImageZoomModal';
 import { OrderFilters } from '@/components/orders/OrderFilters';
 import { useApi } from '@/hooks/use-api';
 import { KIOSK_B2B_STATUS_OPTIONS, matchOrder, uniqueBranchOptions } from '@/lib/order-filters';
@@ -109,6 +110,15 @@ export default function StoreKioskOrdersPage() {
             </div>
           ))}
         </div>
+      )}
+
+      {zoomItem?.productImageSnapshot && (
+        <ImageZoomModal
+          isOpen={!!zoomItem}
+          images={[zoomItem.productImageSnapshot]}
+          productName={zoomItem.productNameSnapshot}
+          onClose={() => setZoomItem(null)}
+        />
       )}
     </div>
   );
