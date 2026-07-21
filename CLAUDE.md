@@ -206,17 +206,21 @@ full LuxeMatch-style storefront (hero/catalog/try-on/search/custom/restock) + My
 
 **Landing Page Animation Demo (Hero → Features Section):**
 - **New section** added right after hero (`app/page.tsx` lines ~152–246): "Find similar designs. See before you buy."
-- **Left side — Similar Image Search animation:**
-  - Upload box with animated bounce (Search icon floating up/down, 2s loop)
-  - 4 real catalog products appear with fade + scale (0.9 → 1, staggered 0.1s per item)
-  - Demonstrates the visual-search feature without requiring actual upload
-- **Right side — AR Try-On animation:**
-  - Face placeholder (circular gradient)
-  - 3 jewelry items animate with floating + opacity pulse (2s loop, cascading delays)
-  - Jewelry style buttons below with fade-in on scroll
-  - Demonstrates the AR try-on experience dynamically
+- **Left side — Similar Image Search workflow animation (4s loop):**
+  1. Upload box appears (0–0.6s): Search icon scales in, "Upload jewelry image" text
+  2. Search progress (0.4–0.7s): 3 pulsing dots + "Searching similar designs…" (loads while upload fades)
+  3. Results appear (2.5s+): 4 catalog products fade-in + scale with ring highlight, staggered 0.15s per item
+  - Real workflow demo: upload → search → results discovered
+- **Right side — AR Try-On workflow animation (4s loop, staggered per jewelry):**
+  - Person silhouette (SVG): head, neck, shoulders, arms (base frame)
+  - 3 jewelry items animate one-by-one:
+    1. **Necklace (0–1.3s):** appears on neck, scales in/out with opacity pulse
+    2. **Bracelet (1.3–2.6s):** appears on left wrist, fits to person
+    3. **Ring (2.6–4s):** appears on right finger, completes try-on
+  - Status text updates per jewelry: "✓ Necklace fitted" → "✓ Bracelet fitted" → "✓ Ring fitted" (synced with jewelry animations)
+  - Realistic AR demo: person trying designs sequentially
 - **Layout:** Side-by-side on desktop (grid-cols-2), stacked on mobile. Left slides in from -X, right from +X (0.6s on scroll trigger via `whileInView`).
-- **Purpose:** Shows key features (Similar Search + Try-On) so visitors instantly see "what's possible" on the landing page.
+- **Purpose:** Demonstrates core features (Similar Search + AR Try-On) with realistic workflows so visitors see exactly how the system works.
 
 ## Gotchas
 
