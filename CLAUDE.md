@@ -239,6 +239,24 @@ full LuxeMatch-style storefront (hero/catalog/try-on/search/custom/restock) + My
   - **Cohesive catalog appearance** across same category/subcategory
 - **Next step:** AI-Features service (`../Jewel-Factory_AI`) must use category in prompts to apply category-specific themes
 
+**Sales Analytics & Star Ratings (branch: `feature/sales-analytics`):**
+- **Multi-role analytics system** showing sales insights for Store Manager, Retailer (HO), and Manufacturer
+- **Star Ratings on Catalogs:** Every product shows ⭐ stars (1-5) based on last 30 days sales + trend indicator (↑ up, ↓ down, → stable)
+  * Star mapping: 0-10 units → ⭐ | 11-30 → ⭐⭐ | 31-60 → ⭐⭐⭐ | 61-100 → ⭐⭐⭐⭐ | 100+ → ⭐⭐⭐⭐⭐
+  * Trend: Compares last 30 days vs previous 30 days (5% threshold); shows % change
+- **Backend:** `lib/db/analytics.ts` (helpers) + `lib/db/analytics-queries.ts` (raw SQL aggregations) + `lib/api/routes/analytics.ts` (8 GET endpoints)
+- **Analytics Endpoints (all guarded):**
+  * `/api/analytics/store-manager/restock` → Best-sellers in branch (sorted by stars)
+  * `/api/analytics/store/branches` → Branch-wise breakdown (top products, by category, by weight)
+  * `/api/analytics/manufacturer/overview` → Top 10, category/weight distribution (all retailers)
+- **UI Components:** `components/ui/StarRating.tsx` + `components/ui/TrendBadge.tsx`
+- **Intelligence Pages:**
+  * Store Manager: `/store-manager/restock` — Table of best-sellers (sortable by stars/units/trend)
+  * Retailer: `/store/intelligence` — Branch selector, top products, category/weight breakdowns
+  * Manufacturer: `/manufacturer/intelligence` — System overview, top products, distributions
+- **Data Scoping:** Store Manager sees THIS branch only; Retailer sees ALL branches; Manufacturer sees ALL retailers
+- **Queries use raw SQL** for complex date-range aggregations (last 30d vs previous 30d); results include snapshots (category, weight, product name) stored at order time
+
 ## Gotchas
 
 - Catch-all route MUST export every method incl. **PUT** (password resets use PUT). The old LuxeMatch app 405'd because PUT was missing.
