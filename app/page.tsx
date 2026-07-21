@@ -283,7 +283,7 @@ export default function LandingPage() {
                     <motion.div
                       key={type}
                       initial={{ opacity: 0, x: -8 }}
-                      animate={{ opacity: [0, 1, 1, 0], x: [−8, 0, 0, −8] }}
+                      animate={{ opacity: [0, 1, 1, 0], x: [-8, 0, 0, -8] }}
                       transition={{
                         duration: 4,
                         repeat: Infinity,
