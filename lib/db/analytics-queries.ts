@@ -1,6 +1,12 @@
 /**
  * Analytics queries for aggregating sales data across roles.
  * Uses raw SQL for complex date-range aggregations.
+ *
+ * All queries combine kiosk + B2B order items via a `UNION ALL` CTE first,
+ * then join to manufacturer_products/aggregate once. Joining kiosk_order_items
+ * AND b2b_order_items to the same manufacturer_products row via two separate
+ * LEFT JOINs multiplies rows (cross-join effect) and corrupts SUMs — UNION ALL
+ * avoids that entirely.
  */
 
 import { prisma } from '@/lib/prisma';
@@ -19,10 +25,8 @@ import {
 // query only SELECTs a subset of these columns.
 interface ProductAggRow {
   id?: string;
-  manufacturer_product_id?: string;
   product_id?: string;
   product_name?: string;
-  product_name_snapshot?: string;
   name?: string;
   design_number?: string | null;
   category?: string | null;
@@ -30,12 +34,43 @@ interface ProductAggRow {
   weight_grams?: string | number | null;
   secure_url?: string | null;
   total_units?: number | string;
-  units_last_30d?: number | string;
-  units_previous_30d?: number | string;
-  units_all_time?: number | string;
-  qty?: number | string;
   retailer_id?: string;
   retailer_name?: string;
+}
+
+interface ProductSalesRow {
+  manufacturer_product_id: string;
+  product_name: string;
+  design_number: string | null;
+  category: string | null;
+  sub_category: string | null;
+  weight_grams: string | number | null;
+  secure_url: string | null;
+  units_last_30d: number | string;
+  units_previous_30d: number | string;
+  units_all_time: number | string;
+}
+
+function mapSalesRow(r: ProductSalesRow): ProductSalesData {
+  const unitsLast30d = Number(r.units_last_30d) || 0;
+  const unitsPrevious30d = Number(r.units_previous_30d) || 0;
+  const { direction, percent } = calculateTrend(unitsLast30d, unitsPrevious30d);
+
+  return {
+    manufacturerProductId: r.manufacturer_product_id,
+    productName: r.product_name || 'Unknown',
+    designNumber: r.design_number || 'N/A',
+    category: r.category ?? null,
+    subCategory: r.sub_category ?? null,
+    weight: parseDecimal(r.weight_grams),
+    imageUrl: r.secure_url ?? null,
+    unitsLast30d,
+    unitsPrevious30d,
+    unitsAllTime: Number(r.units_all_time) || 0,
+    trendPercent: percent,
+    stars: calculateStars(unitsLast30d),
+    trendDirection: direction,
+  };
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -48,81 +83,44 @@ export async function getStoreManagerProductSales(
   const { last30dStart, previous30dStart, previous30dEnd, all30dStart } =
     getDateRanges();
 
-  // Raw SQL query to aggregate kiosk + b2b orders by product
-  const results = await prisma.$queryRaw<
-    Array<{
-      manufacturer_product_id: string;
-      product_name_snapshot: string;
-      design_number: string | null;
-      category_snapshot: string | null;
-      sub_category_snapshot: string | null;
-      weight_grams: string | number | null;
-      secure_url: string | null;
-      units_last_30d: number;
-      units_previous_30d: number;
-      units_all_time: number;
-    }>
-  >`
+  const results = await prisma.$queryRaw<ProductSalesRow[]>`
+    WITH combined AS (
+      SELECT koi.manufacturer_product_id AS product_id, koi.quantity AS quantity, ko.created_at AS created_at
+      FROM kiosk_order_items koi
+      JOIN kiosk_orders ko ON koi.order_id = ko.id
+      WHERE ko.branch_id = ${branchId}::uuid
+        AND ko.forwarded_to_manufacturer = true
+        AND koi.manufacturer_product_id IS NOT NULL
+        AND ko.created_at >= ${all30dStart}::timestamp
+
+      UNION ALL
+
+      SELECT boi.manufacturer_product_id AS product_id, boi.quantity AS quantity, bo.created_at AS created_at
+      FROM b2b_order_items boi
+      JOIN b2b_orders bo ON boi.order_id = bo.id
+      WHERE bo.branch_id = ${branchId}::uuid
+        AND bo.status = 'DELIVERED'
+        AND bo.created_at >= ${all30dStart}::timestamp
+    )
     SELECT
-      COALESCE(koi.manufacturer_product_id, boi.manufacturer_product_id) as manufacturer_product_id,
-      COALESCE(koi.product_name_snapshot, boi.product_name_snapshot) as product_name_snapshot,
+      mp.id AS manufacturer_product_id,
+      mp.name AS product_name,
       mp.design_number,
-      COALESCE(koi.category_snapshot, mp.category) as category_snapshot,
-      mp.sub_category as sub_category_snapshot,
-      mp.weight_grams,
-      mpi.secure_url,
-
-      COALESCE(SUM(CASE WHEN ko.created_at >= ${last30dStart}::timestamp THEN COALESCE(koi.quantity, 0) ELSE 0 END),
-               SUM(CASE WHEN bo.created_at >= ${last30dStart}::timestamp THEN COALESCE(boi.quantity, 0) ELSE 0 END), 0) as units_last_30d,
-
-      COALESCE(SUM(CASE WHEN ko.created_at >= ${previous30dStart}::timestamp AND ko.created_at < ${previous30dEnd}::timestamp THEN COALESCE(koi.quantity, 0) ELSE 0 END),
-               SUM(CASE WHEN bo.created_at >= ${previous30dStart}::timestamp AND bo.created_at < ${previous30dEnd}::timestamp THEN COALESCE(boi.quantity, 0) ELSE 0 END), 0) as units_previous_30d,
-
-      COALESCE(SUM(COALESCE(koi.quantity, 0)), SUM(COALESCE(boi.quantity, 0)), 0) as units_all_time
-
-    FROM kiosk_order_items koi
-    FULL OUTER JOIN kiosk_orders ko ON koi.order_id = ko.id
-    FULL OUTER JOIN b2b_order_items boi ON 1=0  -- Placeholder for union logic
-    FULL OUTER JOIN b2b_orders bo ON boi.order_id = bo.id
-    LEFT JOIN manufacturer_products mp ON COALESCE(koi.manufacturer_product_id, boi.manufacturer_product_id) = mp.id
-    LEFT JOIN manufacturer_product_images mpi ON mp.id = mpi.product_id AND mpi.is_primary = true
-
-    WHERE (ko.branch_id = ${branchId}::uuid AND ko.forwarded_to_manufacturer = true AND ko.created_at >= ${all30dStart}::timestamp)
-      OR (bo.branch_id = ${branchId}::uuid AND bo.status = 'DELIVERED' AND bo.created_at >= ${all30dStart}::timestamp)
-
-    GROUP BY
-      COALESCE(koi.manufacturer_product_id, boi.manufacturer_product_id),
-      COALESCE(koi.product_name_snapshot, boi.product_name_snapshot),
-      mp.design_number,
-      COALESCE(koi.category_snapshot, mp.category),
+      mp.category,
       mp.sub_category,
       mp.weight_grams,
-      mpi.secure_url
-
+      mpi.secure_url,
+      COALESCE(SUM(CASE WHEN c.created_at >= ${last30dStart}::timestamp THEN c.quantity ELSE 0 END), 0) AS units_last_30d,
+      COALESCE(SUM(CASE WHEN c.created_at >= ${previous30dStart}::timestamp AND c.created_at < ${previous30dEnd}::timestamp THEN c.quantity ELSE 0 END), 0) AS units_previous_30d,
+      COALESCE(SUM(c.quantity), 0) AS units_all_time
+    FROM combined c
+    JOIN manufacturer_products mp ON mp.id = c.product_id
+    LEFT JOIN manufacturer_product_images mpi ON mp.id = mpi.product_id AND mpi.is_primary = true
+    GROUP BY mp.id, mp.name, mp.design_number, mp.category, mp.sub_category, mp.weight_grams, mpi.secure_url
     ORDER BY units_last_30d DESC
   `;
 
-  return results.map((r) => {
-    const unitsLast30d = Number(r.units_last_30d) || 0;
-    const unitsPrevious30d = Number(r.units_previous_30d) || 0;
-    const { direction, percent } = calculateTrend(unitsLast30d, unitsPrevious30d);
-
-    return {
-      manufacturerProductId: r.manufacturer_product_id,
-      productName: r.product_name_snapshot || 'Unknown',
-      designNumber: r.design_number || 'N/A',
-      category: r.category_snapshot,
-      subCategory: r.sub_category_snapshot,
-      weight: parseDecimal(r.weight_grams),
-      imageUrl: r.secure_url,
-      unitsLast30d,
-      unitsPrevious30d,
-      unitsAllTime: Number(r.units_all_time) || 0,
-      trendPercent: percent,
-      stars: calculateStars(unitsLast30d),
-      trendDirection: direction,
-    };
-  });
+  return results.map(mapSalesRow);
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -135,62 +133,44 @@ export async function getRetailerProductSales(
   const { last30dStart, previous30dStart, previous30dEnd, all30dStart } =
     getDateRanges();
 
-  // Query: Aggregate all kiosk + b2b orders across all branches of this retailer
-  const results = await prisma.$queryRaw<ProductAggRow[]>`
+  const results = await prisma.$queryRaw<ProductSalesRow[]>`
+    WITH combined AS (
+      SELECT koi.manufacturer_product_id AS product_id, koi.quantity AS quantity, ko.created_at AS created_at
+      FROM kiosk_order_items koi
+      JOIN kiosk_orders ko ON koi.order_id = ko.id
+      WHERE ko.store_id = ${storeId}::uuid
+        AND ko.forwarded_to_manufacturer = true
+        AND koi.manufacturer_product_id IS NOT NULL
+        AND ko.created_at >= ${all30dStart}::timestamp
+
+      UNION ALL
+
+      SELECT boi.manufacturer_product_id AS product_id, boi.quantity AS quantity, bo.created_at AS created_at
+      FROM b2b_order_items boi
+      JOIN b2b_orders bo ON boi.order_id = bo.id
+      WHERE bo.store_id = ${storeId}::uuid
+        AND bo.status = 'DELIVERED'
+        AND bo.created_at >= ${all30dStart}::timestamp
+    )
     SELECT
-      mp.id as manufacturer_product_id,
-      COALESCE(koi.product_name_snapshot, boi.product_name_snapshot, mp.name) as product_name_snapshot,
+      mp.id AS manufacturer_product_id,
+      mp.name AS product_name,
       mp.design_number,
       mp.category,
       mp.sub_category,
       mp.weight_grams,
       mpi.secure_url,
-
-      SUM(CASE WHEN (ko.created_at >= ${last30dStart}::timestamp AND ko.forwarded_to_manufacturer = true)
-               OR (bo.created_at >= ${last30dStart}::timestamp AND bo.status = 'DELIVERED')
-           THEN COALESCE(koi.quantity, boi.quantity, 0) ELSE 0 END) as units_last_30d,
-
-      SUM(CASE WHEN ((ko.created_at >= ${previous30dStart}::timestamp AND ko.created_at < ${previous30dEnd}::timestamp AND ko.forwarded_to_manufacturer = true)
-                  OR (bo.created_at >= ${previous30dStart}::timestamp AND bo.created_at < ${previous30dEnd}::timestamp AND bo.status = 'DELIVERED'))
-           THEN COALESCE(koi.quantity, boi.quantity, 0) ELSE 0 END) as units_previous_30d,
-
-      SUM(COALESCE(koi.quantity, boi.quantity, 0)) as units_all_time
-
-    FROM manufacturer_products mp
-    LEFT JOIN kiosk_order_items koi ON mp.id = koi.manufacturer_product_id
-    LEFT JOIN kiosk_orders ko ON koi.order_id = ko.id AND ko.store_id = ${storeId}::uuid
-    LEFT JOIN b2b_order_items boi ON mp.id = boi.manufacturer_product_id
-    LEFT JOIN b2b_orders bo ON boi.order_id = bo.id AND bo.store_id = ${storeId}::uuid
+      COALESCE(SUM(CASE WHEN c.created_at >= ${last30dStart}::timestamp THEN c.quantity ELSE 0 END), 0) AS units_last_30d,
+      COALESCE(SUM(CASE WHEN c.created_at >= ${previous30dStart}::timestamp AND c.created_at < ${previous30dEnd}::timestamp THEN c.quantity ELSE 0 END), 0) AS units_previous_30d,
+      COALESCE(SUM(c.quantity), 0) AS units_all_time
+    FROM combined c
+    JOIN manufacturer_products mp ON mp.id = c.product_id
     LEFT JOIN manufacturer_product_images mpi ON mp.id = mpi.product_id AND mpi.is_primary = true
-
-    WHERE (ko.created_at >= ${all30dStart}::timestamp OR bo.created_at >= ${all30dStart}::timestamp)
-
-    GROUP BY mp.id, mp.name, mp.design_number, mp.category, mp.sub_category, mp.weight_grams, mpi.secure_url, koi.product_name_snapshot, boi.product_name_snapshot
-    HAVING SUM(COALESCE(koi.quantity, boi.quantity, 0)) > 0
+    GROUP BY mp.id, mp.name, mp.design_number, mp.category, mp.sub_category, mp.weight_grams, mpi.secure_url
     ORDER BY units_last_30d DESC
   `;
 
-  return results.map((r) => {
-    const unitsLast30d = Number(r.units_last_30d) || 0;
-    const unitsPrevious30d = Number(r.units_previous_30d) || 0;
-    const { direction, percent } = calculateTrend(unitsLast30d, unitsPrevious30d);
-
-    return {
-      manufacturerProductId: r.manufacturer_product_id || '',
-      productName: r.product_name_snapshot || 'Unknown',
-      designNumber: r.design_number || 'N/A',
-      category: r.category ?? null,
-      subCategory: r.sub_category ?? null,
-      weight: parseDecimal(r.weight_grams),
-      imageUrl: r.secure_url ?? null,
-      unitsLast30d,
-      unitsPrevious30d,
-      unitsAllTime: Number(r.units_all_time) || 0,
-      trendPercent: percent,
-      stars: calculateStars(unitsLast30d),
-      trendDirection: direction,
-    };
-  });
+  return results.map(mapSalesRow);
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -202,59 +182,56 @@ export async function getRetailerBranchSales(
 ): Promise<BranchSalesData[]> {
   const { last30dStart } = getDateRanges();
 
-  // Get all branches for this retailer
   const branches = await prisma.branch.findMany({
     where: { retailerId: storeId },
     select: { id: true, name: true },
   });
 
-  // For each branch, aggregate sales
   const branchSales: BranchSalesData[] = [];
 
   for (const branch of branches) {
+    // One query per branch, product-level, last 30 days — used for BOTH the
+    // top-products list and the category/weight breakdown (computed in JS
+    // from the same rows) so the branch's totals stay internally consistent.
     const products = await prisma.$queryRaw<ProductAggRow[]>`
+      WITH combined AS (
+        SELECT koi.manufacturer_product_id AS product_id, koi.quantity AS quantity
+        FROM kiosk_order_items koi
+        JOIN kiosk_orders ko ON koi.order_id = ko.id
+        WHERE ko.branch_id = ${branch.id}::uuid
+          AND ko.forwarded_to_manufacturer = true
+          AND koi.manufacturer_product_id IS NOT NULL
+          AND ko.created_at >= ${last30dStart}::timestamp
+
+        UNION ALL
+
+        SELECT boi.manufacturer_product_id AS product_id, boi.quantity AS quantity
+        FROM b2b_order_items boi
+        JOIN b2b_orders bo ON boi.order_id = bo.id
+        WHERE bo.branch_id = ${branch.id}::uuid
+          AND bo.status = 'DELIVERED'
+          AND bo.created_at >= ${last30dStart}::timestamp
+      )
       SELECT
         mp.id,
-        COALESCE(koi.product_name_snapshot, boi.product_name_snapshot, mp.name) as product_name,
+        mp.name AS product_name,
         mp.category,
         mp.sub_category,
         mp.weight_grams,
-        SUM(COALESCE(koi.quantity, boi.quantity, 0)) as total_units
-      FROM manufacturer_products mp
-      LEFT JOIN kiosk_order_items koi ON mp.id = koi.manufacturer_product_id
-      LEFT JOIN kiosk_orders ko ON koi.order_id = ko.id AND ko.branch_id = ${branch.id}::uuid AND ko.forwarded_to_manufacturer = true
-      LEFT JOIN b2b_order_items boi ON mp.id = boi.manufacturer_product_id
-      LEFT JOIN b2b_orders bo ON boi.order_id = bo.id AND bo.branch_id = ${branch.id}::uuid AND bo.status = 'DELIVERED'
-      WHERE (ko.created_at >= ${last30dStart}::timestamp OR bo.created_at >= ${last30dStart}::timestamp)
-      GROUP BY mp.id, mp.name, mp.category, mp.sub_category, mp.weight_grams, koi.product_name_snapshot, boi.product_name_snapshot
-      HAVING SUM(COALESCE(koi.quantity, boi.quantity, 0)) > 0
+        SUM(c.quantity) AS total_units
+      FROM combined c
+      JOIN manufacturer_products mp ON mp.id = c.product_id
+      GROUP BY mp.id, mp.name, mp.category, mp.sub_category, mp.weight_grams
       ORDER BY total_units DESC
-      LIMIT 5
     `;
 
-    // Build category and weight breakdowns
     const byCategory: Record<string, number> = {};
     const byWeight: Record<string, number> = {};
-
-    const allProducts = await prisma.$queryRaw<ProductAggRow[]>`
-      SELECT
-        mp.category,
-        mp.weight_grams,
-        SUM(COALESCE(koi.quantity, boi.quantity, 0)) as qty
-      FROM manufacturer_products mp
-      LEFT JOIN kiosk_order_items koi ON mp.id = koi.manufacturer_product_id
-      LEFT JOIN kiosk_orders ko ON koi.order_id = ko.id AND ko.branch_id = ${branch.id}::uuid
-      LEFT JOIN b2b_order_items boi ON mp.id = boi.manufacturer_product_id
-      LEFT JOIN b2b_orders bo ON boi.order_id = bo.id AND bo.branch_id = ${branch.id}::uuid
-      WHERE (ko.created_at >= ${last30dStart}::timestamp OR bo.created_at >= ${last30dStart}::timestamp)
-      GROUP BY mp.category, mp.weight_grams
-    `;
-
-    allProducts.forEach((p) => {
-      const cat = p.category;
-      if (cat) byCategory[cat] = (byCategory[cat] || 0) + Number(p.qty);
+    products.forEach((p) => {
+      const units = Number(p.total_units) || 0;
+      if (p.category) byCategory[p.category] = (byCategory[p.category] || 0) + units;
       const range = getWeightRange(p.weight_grams ?? null);
-      byWeight[range] = (byWeight[range] || 0) + Number(p.qty);
+      byWeight[range] = (byWeight[range] || 0) + units;
     });
 
     const totalUnits = Object.values(byCategory).reduce((a, b) => a + b, 0);
@@ -263,12 +240,12 @@ export async function getRetailerBranchSales(
       branchId: branch.id,
       branchName: branch.name,
       totalUnitsLast30d: totalUnits,
-      topProducts: products.map((p) => ({
+      topProducts: products.slice(0, 5).map((p) => ({
         productName: p.product_name || 'Unknown',
         category: p.category ?? null,
         subCategory: p.sub_category ?? null,
-        units: Number(p.total_units),
-        stars: calculateStars(Number(p.total_units)),
+        units: Number(p.total_units) || 0,
+        stars: calculateStars(Number(p.total_units) || 0),
       })),
       byCategory,
       byWeight,
@@ -286,24 +263,35 @@ export async function getManufacturerRetailerSales(): Promise<ProductAggRow[]> {
   const { last30dStart } = getDateRanges();
 
   const results = await prisma.$queryRaw<ProductAggRow[]>`
+    WITH combined AS (
+      SELECT koi.manufacturer_product_id AS product_id, koi.quantity AS quantity, ko.store_id AS store_id
+      FROM kiosk_order_items koi
+      JOIN kiosk_orders ko ON koi.order_id = ko.id
+      WHERE ko.forwarded_to_manufacturer = true
+        AND koi.manufacturer_product_id IS NOT NULL
+        AND ko.created_at >= ${last30dStart}::timestamp
+
+      UNION ALL
+
+      SELECT boi.manufacturer_product_id AS product_id, boi.quantity AS quantity, bo.store_id AS store_id
+      FROM b2b_order_items boi
+      JOIN b2b_orders bo ON boi.order_id = bo.id
+      WHERE bo.status = 'DELIVERED'
+        AND bo.created_at >= ${last30dStart}::timestamp
+    )
     SELECT
-      s.id as retailer_id,
-      s.name as retailer_name,
-      mp.id as product_id,
+      s.id AS retailer_id,
+      s.name AS retailer_name,
+      mp.id AS product_id,
       mp.name,
       mp.category,
       mp.sub_category,
-      SUM(COALESCE(koi.quantity, boi.quantity, 0)) as total_units
-    FROM stores s
-    LEFT JOIN kiosk_orders ko ON s.id = ko.store_id
-    LEFT JOIN kiosk_order_items koi ON ko.id = koi.order_id AND ko.forwarded_to_manufacturer = true
-    LEFT JOIN b2b_orders bo ON s.id = bo.store_id
-    LEFT JOIN b2b_order_items boi ON bo.id = boi.order_id AND bo.status = 'DELIVERED'
-    LEFT JOIN manufacturer_products mp ON COALESCE(koi.manufacturer_product_id, boi.manufacturer_product_id) = mp.id
-    WHERE (ko.created_at >= ${last30dStart}::timestamp OR bo.created_at >= ${last30dStart}::timestamp)
+      SUM(c.quantity) AS total_units
+    FROM combined c
+    JOIN stores s ON s.id = c.store_id
+    JOIN manufacturer_products mp ON mp.id = c.product_id
     GROUP BY s.id, s.name, mp.id, mp.name, mp.category, mp.sub_category
-    HAVING SUM(COALESCE(koi.quantity, boi.quantity, 0)) > 0
-    ORDER BY retailer_name, total_units DESC
+    ORDER BY s.name, total_units DESC
   `;
 
   return results;
@@ -317,17 +305,29 @@ export async function getManufacturerCategoryWeightBreakdown(): Promise<ProductA
   const { last30dStart } = getDateRanges();
 
   const results = await prisma.$queryRaw<ProductAggRow[]>`
+    WITH combined AS (
+      SELECT koi.manufacturer_product_id AS product_id, koi.quantity AS quantity
+      FROM kiosk_order_items koi
+      JOIN kiosk_orders ko ON koi.order_id = ko.id
+      WHERE ko.forwarded_to_manufacturer = true
+        AND koi.manufacturer_product_id IS NOT NULL
+        AND ko.created_at >= ${last30dStart}::timestamp
+
+      UNION ALL
+
+      SELECT boi.manufacturer_product_id AS product_id, boi.quantity AS quantity
+      FROM b2b_order_items boi
+      JOIN b2b_orders bo ON boi.order_id = bo.id
+      WHERE bo.status = 'DELIVERED'
+        AND bo.created_at >= ${last30dStart}::timestamp
+    )
     SELECT
       mp.category,
       mp.sub_category,
       mp.weight_grams,
-      SUM(COALESCE(koi.quantity, boi.quantity, 0)) as total_units
-    FROM manufacturer_products mp
-    LEFT JOIN kiosk_order_items koi ON mp.id = koi.manufacturer_product_id
-    LEFT JOIN kiosk_orders ko ON koi.order_id = ko.id AND ko.forwarded_to_manufacturer = true
-    LEFT JOIN b2b_order_items boi ON mp.id = boi.manufacturer_product_id
-    LEFT JOIN b2b_orders bo ON boi.order_id = bo.id AND bo.status = 'DELIVERED'
-    WHERE (ko.created_at >= ${last30dStart}::timestamp OR bo.created_at >= ${last30dStart}::timestamp)
+      SUM(c.quantity) AS total_units
+    FROM combined c
+    JOIN manufacturer_products mp ON mp.id = c.product_id
     GROUP BY mp.category, mp.sub_category, mp.weight_grams
     ORDER BY mp.category, mp.sub_category, mp.weight_grams
   `;
@@ -336,11 +336,25 @@ export async function getManufacturerCategoryWeightBreakdown(): Promise<ProductA
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// MANUFACTURER: Top 10 products (all retailers, all time)
+// MANUFACTURER: Top products (all retailers, all time)
 // ────────────────────────────────────────────────────────────────────────────
 
 export async function getManufacturerTopProducts(limit = 10): Promise<ProductAggRow[]> {
   const results = await prisma.$queryRaw<ProductAggRow[]>`
+    WITH combined AS (
+      SELECT koi.manufacturer_product_id AS product_id, koi.quantity AS quantity
+      FROM kiosk_order_items koi
+      JOIN kiosk_orders ko ON koi.order_id = ko.id
+      WHERE ko.forwarded_to_manufacturer = true
+        AND koi.manufacturer_product_id IS NOT NULL
+
+      UNION ALL
+
+      SELECT boi.manufacturer_product_id AS product_id, boi.quantity AS quantity
+      FROM b2b_order_items boi
+      JOIN b2b_orders bo ON boi.order_id = bo.id
+      WHERE bo.status = 'DELIVERED'
+    )
     SELECT
       mp.id,
       mp.name,
@@ -349,15 +363,11 @@ export async function getManufacturerTopProducts(limit = 10): Promise<ProductAgg
       mp.sub_category,
       mp.weight_grams,
       mpi.secure_url,
-      SUM(COALESCE(koi.quantity, boi.quantity, 0)) as total_units
-    FROM manufacturer_products mp
-    LEFT JOIN kiosk_order_items koi ON mp.id = koi.manufacturer_product_id
-    LEFT JOIN kiosk_orders ko ON koi.order_id = ko.id AND ko.forwarded_to_manufacturer = true
-    LEFT JOIN b2b_order_items boi ON mp.id = boi.manufacturer_product_id
-    LEFT JOIN b2b_orders bo ON boi.order_id = bo.id AND bo.status = 'DELIVERED'
+      SUM(c.quantity) AS total_units
+    FROM combined c
+    JOIN manufacturer_products mp ON mp.id = c.product_id
     LEFT JOIN manufacturer_product_images mpi ON mp.id = mpi.product_id AND mpi.is_primary = true
     GROUP BY mp.id, mp.name, mp.design_number, mp.category, mp.sub_category, mp.weight_grams, mpi.secure_url
-    HAVING SUM(COALESCE(koi.quantity, boi.quantity, 0)) > 0
     ORDER BY total_units DESC
     LIMIT ${limit}
   `;
