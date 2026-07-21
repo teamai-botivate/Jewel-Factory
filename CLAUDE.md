@@ -225,6 +225,20 @@ full LuxeMatch-style storefront (hero/catalog/try-on/search/custom/restock) + My
 - **Usage:** Retailer can upload a jewelry photo to discover visually similar pieces from the manufacturer catalog
 - **Same as:** Store Manager search feature (`/store-manager/search`), but accessible from Retailer portal
 
+**AI Category-Aware Theme Generation:**
+- **Problem:** AI-generated images had no consistency per product category. Necklaces looked different from bangles, creating a disjointed catalog.
+- **Solution:** Pass `category` + `subCategory` to ALL AI endpoints (`/describe`, `/catalog`, `/transparent`)
+- **Implementation (components/manufacturer/ProductForm.tsx):**
+  - New helper: `aiFormWithCategory()` — includes category + subCategory in FormData
+  - Updated `aiCatalog()` — uses new helper to send category info
+  - Updated `aiTransparent()` — uses new helper to send category info
+  - `aiDescribe()` already sent category (no change needed)
+- **Result:** AI-Features service receives category context and can generate:
+  - **Consistent backgrounds per category** (all necklaces have similar aesthetic)
+  - **Themed product presentations** (bangles style ≠ necklace style)
+  - **Cohesive catalog appearance** across same category/subcategory
+- **Next step:** AI-Features service (`../Jewel-Factory_AI`) must use category in prompts to apply category-specific themes
+
 ## Gotchas
 
 - Catch-all route MUST export every method incl. **PUT** (password resets use PUT). The old LuxeMatch app 405'd because PUT was missing.
