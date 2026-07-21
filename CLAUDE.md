@@ -215,6 +215,16 @@ full LuxeMatch-style storefront (hero/catalog/try-on/search/custom/restock) + My
 - **Layout:** Single column, wider container (max-w-5xl, not max-w-2xl). Compact padding: card p-5, boxes p-4/5, results grid 4 cols. Slides in from bottom (y: 24) on scroll trigger via `whileInView`.
 - **Purpose:** Showcase AI-powered Similar Search with realistic animation so visitors instantly see the intelligent discovery feature on the landing page.
 
+**Similar Design Search for Retailers (Head Office):**
+- **Feature:** Retailers now have the same AI-powered similar design search as Store Managers
+- **Implementation:**
+  - New API endpoint: `POST /api/store/search/image` (store-portal.ts) — protected by `storeGuard`
+  - New UI page: `/store/similar-search` (upload image → find similar catalog pieces)
+  - Same visual-search logic: embed image → search Qdrant vector DB → return similar manufacturer products
+  - New menu item in Retailer sidebar under "Operations" section
+- **Usage:** Retailer can upload a jewelry photo to discover visually similar pieces from the manufacturer catalog
+- **Same as:** Store Manager search feature (`/store-manager/search`), but accessible from Retailer portal
+
 ## Gotchas
 
 - Catch-all route MUST export every method incl. **PUT** (password resets use PUT). The old LuxeMatch app 405'd because PUT was missing.
