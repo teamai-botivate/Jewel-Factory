@@ -88,7 +88,7 @@ export async function getStoreManagerProductSales(
       SELECT koi.manufacturer_product_id AS product_id, koi.quantity AS quantity, ko.created_at AS created_at
       FROM kiosk_order_items koi
       JOIN kiosk_orders ko ON koi.order_id = ko.id
-      WHERE ko.branch_id = ${branchId}::uuid
+      WHERE ko.branch_id = ${branchId}
         AND ko.forwarded_to_manufacturer = true
         AND koi.manufacturer_product_id IS NOT NULL
         AND ko.created_at >= ${all30dStart}::timestamp
@@ -98,7 +98,7 @@ export async function getStoreManagerProductSales(
       SELECT boi.manufacturer_product_id AS product_id, boi.quantity AS quantity, bo.created_at AS created_at
       FROM b2b_order_items boi
       JOIN b2b_orders bo ON boi.order_id = bo.id
-      WHERE bo.branch_id = ${branchId}::uuid
+      WHERE bo.branch_id = ${branchId}
         AND bo.status = 'DELIVERED'
         AND bo.created_at >= ${all30dStart}::timestamp
     )
@@ -138,7 +138,7 @@ export async function getRetailerProductSales(
       SELECT koi.manufacturer_product_id AS product_id, koi.quantity AS quantity, ko.created_at AS created_at
       FROM kiosk_order_items koi
       JOIN kiosk_orders ko ON koi.order_id = ko.id
-      WHERE ko.store_id = ${storeId}::uuid
+      WHERE ko.store_id = ${storeId}
         AND ko.forwarded_to_manufacturer = true
         AND koi.manufacturer_product_id IS NOT NULL
         AND ko.created_at >= ${all30dStart}::timestamp
@@ -148,7 +148,7 @@ export async function getRetailerProductSales(
       SELECT boi.manufacturer_product_id AS product_id, boi.quantity AS quantity, bo.created_at AS created_at
       FROM b2b_order_items boi
       JOIN b2b_orders bo ON boi.order_id = bo.id
-      WHERE bo.store_id = ${storeId}::uuid
+      WHERE bo.store_id = ${storeId}
         AND bo.status = 'DELIVERED'
         AND bo.created_at >= ${all30dStart}::timestamp
     )
@@ -198,7 +198,7 @@ export async function getRetailerBranchSales(
         SELECT koi.manufacturer_product_id AS product_id, koi.quantity AS quantity
         FROM kiosk_order_items koi
         JOIN kiosk_orders ko ON koi.order_id = ko.id
-        WHERE ko.branch_id = ${branch.id}::uuid
+        WHERE ko.branch_id = ${branch.id}
           AND ko.forwarded_to_manufacturer = true
           AND koi.manufacturer_product_id IS NOT NULL
           AND ko.created_at >= ${last30dStart}::timestamp
@@ -208,7 +208,7 @@ export async function getRetailerBranchSales(
         SELECT boi.manufacturer_product_id AS product_id, boi.quantity AS quantity
         FROM b2b_order_items boi
         JOIN b2b_orders bo ON boi.order_id = bo.id
-        WHERE bo.branch_id = ${branch.id}::uuid
+        WHERE bo.branch_id = ${branch.id}
           AND bo.status = 'DELIVERED'
           AND bo.created_at >= ${last30dStart}::timestamp
       )
