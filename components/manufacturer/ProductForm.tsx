@@ -81,6 +81,13 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
     return fd;
   }
 
+  function aiFormWithCategory(extra?: boolean): FormData {
+    const fd = aiForm(extra);
+    if (form.category) fd.append('category', form.category);
+    if (form.subCategory) fd.append('subCategory', form.subCategory);
+    return fd;
+  }
+
   async function b64ToFile(b64: string, name: string): Promise<File> {
     const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
     return new File([bytes], name, { type: 'image/png' });
@@ -109,7 +116,7 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
     if (!aiRaw) { setAiError('Choose a raw photo first.'); return; }
     setAiBusy('catalog'); setAiError(null);
     try {
-      const res = await fetch('/api/manufacturer/ai/catalog', { method: 'POST', credentials: 'same-origin', body: aiForm(withInstr) });
+      const res = await fetch('/api/manufacturer/ai/catalog', { method: 'POST', credentials: 'same-origin', body: aiFormWithCategory(withInstr) });
       const json = (await res.json()) as { data?: { imageBase64: string }; error?: { message: string } };
       if (!res.ok || !json.data) throw new Error(json.error?.message ?? 'Catalog generation failed');
       const file = await b64ToFile(json.data.imageBase64, 'ai-catalog.png');
@@ -122,7 +129,7 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
     if (!aiRaw) { setAiError('Choose a raw photo first.'); return; }
     setAiBusy('transparent'); setAiError(null);
     try {
-      const fd = aiForm(withInstr);
+      const fd = aiFormWithCategory(withInstr);
       fd.append('jewelleryType', tryonType);
       const res = await fetch('/api/manufacturer/ai/transparent', { method: 'POST', credentials: 'same-origin', body: fd });
       const json = (await res.json()) as { data?: { imageBase64: string }; error?: { message: string } };
