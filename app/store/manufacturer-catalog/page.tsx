@@ -2,10 +2,11 @@
 
 import { Loader2, Gem, ShoppingCart, Check, Minus, Plus, Trash2, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { StarRating } from '@/components/ui/StarRating';
 import { useApi, apiPost } from '@/hooks/use-api';
 import { useB2bCart } from '@/hooks/use-b2b-cart';
 import { CATEGORIES, subCategoriesFor } from '@/lib/categories';
@@ -13,6 +14,8 @@ import { titleCaseName, formatWeight } from '@/lib/format';
 
 type Img = { secureUrl: string; isPrimary: boolean };
 type Product = { id: string; designNumber: string; name: string; category: string | null; subCategory: string | null; weightGrams: string | null; hasTryon: boolean; images: Img[] };
+// Sales info across ALL of this retailer's branches, keyed by manufacturerProductId.
+type SalesInfo = { stars: number; unitsLast30d: number };
 
 export default function ManufacturerCatalogBrowsePage() {
   const { data, error, loading } = useApi<Product[]>('/api/store/catalog', '/store/login');
@@ -24,6 +27,20 @@ export default function ManufacturerCatalogBrowsePage() {
   const [showCart, setShowCart] = useState(false);
   const [notes, setNotes] = useState('');
   const [placing, setPlacing] = useState(false);
+  const [salesMap, setSalesMap] = useState<Record<string, SalesInfo>>({});
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/analytics/store/products', { credentials: 'same-origin' });
+        if (!res.ok) return;
+        const json = (await res.json()) as { data?: Array<{ manufacturerProductId: string; stars: number; unitsLast30d: number }> };
+        const map: Record<string, SalesInfo> = {};
+        (json.data ?? []).forEach((p) => { map[p.manufacturerProductId] = { stars: p.stars, unitsLast30d: p.unitsLast30d }; });
+        setSalesMap(map);
+      } catch { /* non-critical — catalog still works without sales data */ }
+    })();
+  }, []);
 
   const filtered = (data ?? []).filter((p) => {
     const matchSearch = !search || p.name.toLowerCase().includes(search.toLowerCase()) || p.designNumber.toLowerCase().includes(search.toLowerCase());
@@ -129,6 +146,12 @@ export default function ManufacturerCatalogBrowsePage() {
                     <p className="truncate text-xs text-muted-foreground">
                       {p.designNumber}{p.category ? ` · ${p.category}` : ''}{p.subCategory ? ` › ${p.subCategory}` : ''}{formatWeight(p.weightGrams) ? ` · ${formatWeight(p.weightGrams)}` : ''}
                     </p>
+                    {salesMap[p.id] ? (
+                      <div className="mt-1 flex items-center gap-1.5">
+                        <StarRating count={salesMap[p.id].stars} size="sm" />
+                        <span className="text-[10px] text-muted-foreground">{salesMap[p.id].unitsLast30d} sold · 30d</span>
+                      </div>
+                    ) : null}
                   </div>
                   <Button size="sm" variant={inCart ? 'outline' : 'default'} className={`w-full ${inCart ? 'border-green-300 text-green-700' : 'metal-sheen text-[#17120b] font-semibold'}`}
                     onClick={() => cart.add({ productId: p.id, name: p.name, designNumber: p.designNumber, imageUrl: img?.secureUrl })}>
