@@ -28,20 +28,17 @@ export default function StoreManagerCustomDesignPage() {
     try {
       const signRes = await fetch('/api/branch-manager/custom-designs/upload-sign', { method: 'POST', credentials: 'same-origin' });
       if (signRes.status === 401) { window.location.assign('/store-manager/login'); return; }
-      const signJson = (await signRes.json()) as { data?: { apiKey: string; timestamp: number; folder: string; signature: string; uploadUrl: string; maxBytes: number }; error?: { message: string } };
+      const signJson = (await signRes.json()) as { data?: { uploadUrl: string; secureUrl: string; maxBytes: number }; error?: { message: string } };
       if (!signRes.ok || !signJson.data) { setError(signJson.error?.message ?? 'Upload unavailable.'); return; }
       const s = signJson.data;
       if (file.size > s.maxBytes) { setError(`Image too large (max ${Math.round(s.maxBytes / 1024 / 1024)}MB).`); return; }
-      const fd = new FormData();
-      fd.append('file', file);
-      fd.append('api_key', s.apiKey);
-      fd.append('timestamp', String(s.timestamp));
-      fd.append('signature', s.signature);
-      fd.append('folder', s.folder);
-      const upRes = await fetch(s.uploadUrl, { method: 'POST', body: fd });
-      const upJson = (await upRes.json()) as { secure_url?: string; error?: { message: string } };
-      if (!upRes.ok || !upJson.secure_url) { setError(upJson.error?.message ?? 'Upload failed.'); return; }
-      set('imageUrl', upJson.secure_url);
+      const upRes = await fetch(s.uploadUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': file.type || 'application/octet-stream' },
+        body: file,
+      });
+      if (!upRes.ok) { setError(`Upload failed (${upRes.status}).`); return; }
+      set('imageUrl', s.secureUrl);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Upload failed.');
     } finally { setUploading(false); }

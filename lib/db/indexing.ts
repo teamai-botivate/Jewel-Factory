@@ -1,5 +1,5 @@
 /**
- * Index a manufacturer product's primary image into Qdrant for similar-image
+ * Index a manufacturer product's primary image into PostgreSQL pgvector for similar-image
  * search. Fire-and-forget from the image-save route; failures are swallowed so
  * the upload flow never blocks on the embedder being warm.
  */
@@ -22,16 +22,16 @@ export async function indexManufacturerProduct(productId: string): Promise<void>
   const base64 = buf.toString('base64');
 
   const vector = await embedImageBase64(base64);
+  await prisma.manufacturerProductEmbedding.upsert({
+    where: { productId: product.id },
+    update: { qdrantPointId: product.id, embeddingModel: 'open_clip:ViT-B-32:laion2b', dimensions: EMBEDDING_DIM, imageUrl: img.secureUrl },
+    create: { productId: product.id, qdrantPointId: product.id, embeddingModel: 'open_clip:ViT-B-32:laion2b', dimensions: EMBEDDING_DIM, imageUrl: img.secureUrl },
+  });
+
   await upsertVector(product.id, vector, {
     manufacturerProductId: product.id,
     manufacturerId: product.manufacturerId,
     category: product.category,
     purity: product.purity,
-  });
-
-  await prisma.manufacturerProductEmbedding.upsert({
-    where: { productId: product.id },
-    update: { qdrantPointId: product.id, embeddingModel: 'open_clip:ViT-B-32:laion2b', dimensions: EMBEDDING_DIM, imageUrl: img.secureUrl },
-    create: { productId: product.id, qdrantPointId: product.id, embeddingModel: 'open_clip:ViT-B-32:laion2b', dimensions: EMBEDDING_DIM, imageUrl: img.secureUrl },
   });
 }

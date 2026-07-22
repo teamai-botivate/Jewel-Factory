@@ -8,7 +8,7 @@ import { prisma } from '@/lib/prisma';
 import { getServerEnv } from '@/lib/env';
 import { verifyPassword } from '@/lib/password';
 import { KIOSK_COOKIE, issueKioskCookie, verifyKioskCookie, cookieOptions } from '@/lib/auth';
-import { signUpload, storeFolder } from '@/lib/cloudinary';
+import { signUpload, storeFolder } from '@/lib/storage';
 import { listActiveProducts, getActiveProductByDesignOrId } from '@/lib/db/manufacturer-catalog';
 import { placeKioskOrder, getKioskOrderPublic } from '@/lib/db/orders';
 import { placeCustomRequest } from '@/lib/db/custom-design';
@@ -228,10 +228,10 @@ kioskRoutes.post('/custom-design/upload-sign', zValidator('json', z.object({ sto
   const store = await resolveStore(c.req.valid('json').storeSlug);
   if (!store) return sendError(c, 'not_found', 'Store not found or not active.', 404);
   try {
-    const signed = signUpload({ folder: storeFolder(store.id, 'custom'), bucket: 'custom' });
+    const signed = await signUpload({ folder: storeFolder(store.id, 'custom'), bucket: 'custom' });
     return sendData(c, signed);
   } catch (err) {
-    return sendError(c, 'upstream_failed', err instanceof Error ? err.message : 'Cloudinary not configured', 503);
+    return sendError(c, 'upstream_failed', err instanceof Error ? err.message : 'Object storage not configured', 503);
   }
 });
 

@@ -21,6 +21,10 @@ const ServerEnvSchema = z.object({
   CLOUDINARY_API_KEY: z.string().optional(),
   CLOUDINARY_API_SECRET: z.string().optional(),
 
+  AWS_REGION: z.string().default('ap-south-1'),
+  AWS_S3_BUCKET: z.string().optional(),
+  S3_PUBLIC_BASE_URL: z.string().url().optional(),
+
   EMBEDDER_URL: z.string().optional(),
   EMBEDDER_API_KEY: z.string().optional(),
   // AI-Features service (catalog image + transparent PNG + name/description).
@@ -28,11 +32,6 @@ const ServerEnvSchema = z.object({
   // the "Generate with AI" button is hidden and manual add works as before.
   AI_FEATURES_URL: z.string().optional(),
   AI_FEATURES_API_KEY: z.string().optional(),
-  QDRANT_URL: z.string().optional(),
-  QDRANT_API_KEY: z.string().optional(),
-  QDRANT_MANUFACTURER_COLLECTION: z
-    .string()
-    .default('jewelfactory_manufacturer_products'),
 
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.coerce.number().optional(),

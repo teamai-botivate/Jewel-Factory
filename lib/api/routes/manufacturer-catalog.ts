@@ -13,7 +13,7 @@ import {
   setProductTryon,
   removeProductTryon,
 } from '@/lib/db/manufacturer-catalog';
-import { signUpload, manufacturerFolder } from '@/lib/cloudinary';
+import { signUpload, manufacturerFolder } from '@/lib/storage';
 import { getManufacturerDashboard } from '@/lib/db/manufacturer-dashboard';
 import { indexManufacturerProduct } from '@/lib/db/indexing';
 import { sendData, sendError } from '../envelope';
@@ -102,10 +102,10 @@ manufacturerCatalogRoutes.post('/products/:id/images/sign', async (c) => {
   const product = await getManufacturerProduct(mfrId, c.req.param('id'));
   if (!product) return sendError(c, 'not_found', 'Product not found', 404);
   try {
-    const signed = signUpload({ folder: manufacturerFolder(mfrId, 'catalog'), bucket: 'catalog' });
+    const signed = await signUpload({ folder: manufacturerFolder(mfrId, 'catalog'), bucket: 'catalog' });
     return sendData(c, signed);
   } catch (err) {
-    return sendError(c, 'upstream_failed', err instanceof Error ? err.message : 'Cloudinary not configured', 503);
+    return sendError(c, 'upstream_failed', err instanceof Error ? err.message : 'Object storage not configured', 503);
   }
 });
 
@@ -139,10 +139,10 @@ manufacturerCatalogRoutes.post('/products/:id/tryon/sign', async (c) => {
   const product = await getManufacturerProduct(mfrId, c.req.param('id'));
   if (!product) return sendError(c, 'not_found', 'Product not found', 404);
   try {
-    const signed = signUpload({ folder: manufacturerFolder(mfrId, 'tryon'), bucket: 'tryon' });
+    const signed = await signUpload({ folder: manufacturerFolder(mfrId, 'tryon'), bucket: 'tryon' });
     return sendData(c, signed);
   } catch (err) {
-    return sendError(c, 'upstream_failed', err instanceof Error ? err.message : 'Cloudinary not configured', 503);
+    return sendError(c, 'upstream_failed', err instanceof Error ? err.message : 'Object storage not configured', 503);
   }
 });
 

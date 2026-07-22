@@ -22,7 +22,7 @@ import {
 import { placeCustomRequest, getCustomRequestsByBranch, markCustomCompleted } from '@/lib/db/custom-design';
 import { listOrderMessages, addOrderMessage } from '@/lib/db/messages';
 import { formatStoreAddress } from '@/lib/db/stores';
-import { signUpload, storeFolder } from '@/lib/cloudinary';
+import { signUpload, storeFolder } from '@/lib/storage';
 import { embedImageBase64, searchByVector } from '@/lib/search';
 import { sendData, sendError } from '../envelope';
 import { branchManagerGuard, type AppEnv } from '../guards';
@@ -205,10 +205,10 @@ const CustomBody = z.object({
 // Signed Cloudinary upload for the customer's reference photo (branch-scoped).
 branchManagerRoutes.post('/custom-designs/upload-sign', branchManagerGuard, async (c) => {
   try {
-    const signed = signUpload({ folder: storeFolder(c.get('storeId'), 'custom'), bucket: 'custom' });
+    const signed = await signUpload({ folder: storeFolder(c.get('storeId'), 'custom'), bucket: 'custom' });
     return sendData(c, signed);
   } catch (err) {
-    return sendError(c, 'upstream_failed', err instanceof Error ? err.message : 'Cloudinary not configured', 503);
+    return sendError(c, 'upstream_failed', err instanceof Error ? err.message : 'Object storage not configured', 503);
   }
 });
 

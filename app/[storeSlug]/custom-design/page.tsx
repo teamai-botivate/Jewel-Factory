@@ -42,22 +42,19 @@ export default function CustomDesignPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ storeSlug: store.slug }),
       });
-      const signJson = (await signRes.json()) as { data?: { cloudName: string; apiKey: string; timestamp: number; folder: string; signature: string; uploadUrl: string; maxBytes: number }; error?: { message: string } };
+      const signJson = (await signRes.json()) as { data?: { uploadUrl: string; secureUrl: string; maxBytes: number }; error?: { message: string } };
       if (!signRes.ok || !signJson.data) { setError(signJson.error?.message ?? 'Upload unavailable.'); return; }
       const s = signJson.data;
       if (file.size > s.maxBytes) { setError(`Image too large (max ${Math.round(s.maxBytes / 1024 / 1024)}MB).`); return; }
 
-      // 2. Upload straight to Cloudinary.
-      const fd = new FormData();
-      fd.append('file', file);
-      fd.append('api_key', s.apiKey);
-      fd.append('timestamp', String(s.timestamp));
-      fd.append('signature', s.signature);
-      fd.append('folder', s.folder);
-      const upRes = await fetch(s.uploadUrl, { method: 'POST', body: fd });
-      const upJson = (await upRes.json()) as { secure_url?: string; error?: { message: string } };
-      if (!upRes.ok || !upJson.secure_url) { setError(upJson.error?.message ?? 'Upload failed.'); return; }
-      set('imageUrl', upJson.secure_url);
+      // 2. Upload straight to private S3 using the short-lived signed URL.
+      const upRes = await fetch(s.uploadUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': file.type || 'application/octet-stream' },
+        body: file,
+      });
+      if (!upRes.ok) { setError(`Upload failed (${upRes.status}).`); return; }
+      set('imageUrl', s.secureUrl);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Upload failed.');
     } finally {

@@ -1,8 +1,9 @@
 /**
- * Similar-image search: OpenCLIP embedder + Qdrant (manufacturer collection).
+ * Similar-image search: OpenCLIP embedder + PostgreSQL pgvector.
  * NODE-ONLY (server). Customers search the global manufacturer catalog.
  */
 import { getServerEnv } from '@/lib/env';
+import { prisma } from '@/lib/prisma';
 
 export const EMBEDDING_DIM = 512;
 
@@ -30,57 +31,40 @@ export async function embedImageBase64(base64: string): Promise<number[]> {
   return json.embedding;
 }
 
-// ── Qdrant ────────────────────────────────────────────────────────────────────
-
-function qdrantBase(): string {
-  const url = getServerEnv().QDRANT_URL;
-  if (!url) throw new Error('QDRANT_URL is not configured');
-  return url.replace(/\/$/, '');
-}
-function qdrantHeaders(): Record<string, string> {
-  const env = getServerEnv();
-  const h: Record<string, string> = { 'Content-Type': 'application/json' };
-  if (env.QDRANT_API_KEY) h['api-key'] = env.QDRANT_API_KEY;
-  return h;
-}
-function collection(): string {
-  return getServerEnv().QDRANT_MANUFACTURER_COLLECTION;
-}
-
 export async function ensureCollection(): Promise<void> {
-  const res = await fetch(`${qdrantBase()}/collections/${collection()}`, { headers: qdrantHeaders() });
-  if (res.ok) return;
-  await fetch(`${qdrantBase()}/collections/${collection()}`, {
-    method: 'PUT',
-    headers: qdrantHeaders(),
-    body: JSON.stringify({ vectors: { size: EMBEDDING_DIM, distance: 'Cosine' } }),
-  });
+  // The pgvector extension and vector column are installed by Prisma migration.
+  await prisma.$queryRawUnsafe('SELECT 1 FROM pg_extension WHERE extname = \'vector\'');
 }
 
 export async function upsertVector(pointId: string, vector: number[], payload: Record<string, unknown>): Promise<void> {
-  await ensureCollection();
-  await fetch(`${qdrantBase()}/collections/${collection()}/points`, {
-    method: 'PUT',
-    headers: qdrantHeaders(),
-    body: JSON.stringify({ points: [{ id: pointId, vector, payload }] }),
-  });
+  if (vector.length !== EMBEDDING_DIM) throw new Error(`Expected ${EMBEDDING_DIM}-dimension embedding`);
+  await prisma.$executeRawUnsafe(
+    `UPDATE manufacturer_product_embeddings
+       SET embedding = $2::vector, metadata = $3::jsonb, indexed_at = NOW()
+     WHERE product_id = $1`,
+    pointId,
+    `[${vector.join(',')}]`,
+    JSON.stringify(payload),
+  );
 }
 
 export async function deleteVector(pointId: string): Promise<void> {
-  await fetch(`${qdrantBase()}/collections/${collection()}/points/delete`, {
-    method: 'POST',
-    headers: qdrantHeaders(),
-    body: JSON.stringify({ points: [pointId] }),
-  });
+  await prisma.$executeRawUnsafe(
+    'UPDATE manufacturer_product_embeddings SET embedding = NULL, metadata = NULL WHERE product_id = $1',
+    pointId,
+  );
 }
 
 export async function searchByVector(vector: number[], limit = 24): Promise<{ id: string; score: number }[]> {
-  const res = await fetch(`${qdrantBase()}/collections/${collection()}/points/search`, {
-    method: 'POST',
-    headers: qdrantHeaders(),
-    body: JSON.stringify({ vector, limit: Math.min(limit, 100), with_payload: false }),
-  });
-  if (!res.ok) throw new Error(`qdrant search failed: ${res.status}`);
-  const json = (await res.json()) as { result: { id: string; score: number }[] };
-  return json.result.map((r) => ({ id: String(r.id), score: r.score }));
+  if (vector.length !== EMBEDDING_DIM) throw new Error(`Expected ${EMBEDDING_DIM}-dimension embedding`);
+  const safeLimit = Math.max(1, Math.min(Math.trunc(limit), 100));
+  const rows = await prisma.$queryRawUnsafe<Array<{ id: string; score: number }>>(
+    `SELECT product_id AS id, (1 - (embedding <=> $1::vector))::double precision AS score
+       FROM manufacturer_product_embeddings
+      WHERE embedding IS NOT NULL
+      ORDER BY embedding <=> $1::vector
+      LIMIT ${safeLimit}`,
+    `[${vector.join(',')}]`,
+  );
+  return rows.map((row) => ({ id: row.id, score: Number(row.score) }));
 }

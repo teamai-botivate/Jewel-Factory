@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { uploadToCloudinary } from '@/lib/upload-client';
+import { uploadToObjectStorage } from '@/lib/upload-client';
 import { CATEGORIES, subCategoriesFor } from '@/lib/categories';
 
 const PURITIES = ['24K', '22K', '18K', '14K', '916', '750', '585'];
@@ -260,7 +260,7 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
     if (!id) return;
     setUploadingImage(true);
     try {
-      const { secureUrl, publicId } = await uploadToCloudinary(`/api/manufacturer/products/${id}/images/sign`, file);
+      const { secureUrl, publicId } = await uploadToObjectStorage(`/api/manufacturer/products/${id}/images/sign`, file);
       const res = await fetch(`/api/manufacturer/products/${id}/images`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -292,7 +292,7 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
     if (!id) return;
     setUploadingTryon(true);
     try {
-      const { secureUrl, publicId } = await uploadToCloudinary(`/api/manufacturer/products/${id}/tryon/sign`, file);
+      const { secureUrl, publicId } = await uploadToObjectStorage(`/api/manufacturer/products/${id}/tryon/sign`, file);
       const res = await fetch(`/api/manufacturer/products/${id}/tryon`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

@@ -16,13 +16,17 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
     "migrate:categories": "tsx prisma/migrate-categories.ts",
-    "migrate:branches": "tsx prisma/migrate-branches.ts"
+    "migrate:branches": "tsx prisma/migrate-branches.ts",
+    "migrate:cloudinary-to-s3": "tsx scripts/migrate_cloudinary_to_s3.ts",
+    "migrate:qdrant-to-pgvector": "tsx scripts/migrate_qdrant_to_pgvector.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@hono/zod-validator": "^0.4.2",
+    "@aws-sdk/client-s3": "^3.850.0",
+    "@aws-sdk/s3-request-presigner": "^3.850.0",
     "@hookform/resolvers": "^3.10.0",
     "@prisma/client": "^6.2.1",
     "@radix-ui/react-accordion": "^1.2.4",
@@ -73,8 +77,7 @@
     "zod": "^3.25.76",
     "three": "^0.170.0",
     "@mediapipe/tasks-vision": "^0.10.18",
-    "cloudinary": "^2.5.1",
-    "@qdrant/js-client-rest": "^1.13.0"
+    "cloudinary": "^2.5.1"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",

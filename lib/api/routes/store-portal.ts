@@ -12,7 +12,7 @@ import {
   listBranchManagers, createBranchManager, updateBranchManager,
   resetBranchManagerPassword, deleteBranchManager,
 } from '@/lib/db/branches';
-import { signUpload, storeFolder } from '@/lib/cloudinary';
+import { signUpload, storeFolder } from '@/lib/storage';
 import { embedImageBase64, searchByVector } from '@/lib/search';
 import { prisma } from '@/lib/prisma';
 import { sendData, sendError } from '../envelope';
@@ -46,10 +46,10 @@ storePortalRoutes.patch('/branding', storeGuard, zValidator('json', BrandingBody
 // POST /branding/logo/sign — signed Cloudinary upload for store logo
 storePortalRoutes.post('/branding/logo/sign', storeGuard, async (c) => {
   try {
-    const signed = signUpload({ folder: storeFolder(c.get('storeId'), 'logo'), bucket: 'logo' });
+    const signed = await signUpload({ folder: storeFolder(c.get('storeId'), 'logo'), bucket: 'logo' });
     return sendData(c, signed);
   } catch (err) {
-    return sendError(c, 'upstream_failed', err instanceof Error ? err.message : 'Cloudinary not configured', 503);
+    return sendError(c, 'upstream_failed', err instanceof Error ? err.message : 'Object storage not configured', 503);
   }
 });
 
