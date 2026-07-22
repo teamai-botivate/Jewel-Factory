@@ -573,7 +573,10 @@ model CustomDesignRequest {
   referenceImageUrl      String?      @map("reference_image_url")
   referenceImagePublicId String?      @map("reference_image_public_id")
   category               String
-  weightGrams            Decimal?     @map("weight_grams") @db.Decimal(8, 3)
+  // Jewellery weight is rarely exact — captured as a range (equal min/max if
+  // the store manager only knows one figure).
+  weightGramsMin         Decimal?     @map("weight_grams_min") @db.Decimal(8, 3)
+  weightGramsMax         Decimal?     @map("weight_grams_max") @db.Decimal(8, 3)
   purity                 String?
   designNotes            String?      @map("design_notes")
   status                 CustomStatus @default(PENDING)
@@ -604,7 +607,8 @@ model CustomDesignOrder {
   storeNameSnapshot    String  @map("store_name_snapshot")
   storeAddressSnapshot String  @map("store_address_snapshot")
   category             String
-  weightGrams          Decimal? @map("weight_grams") @db.Decimal(8, 3)
+  weightGramsMin       Decimal? @map("weight_grams_min") @db.Decimal(8, 3)
+  weightGramsMax       Decimal? @map("weight_grams_max") @db.Decimal(8, 3)
   purity               String?
   referenceImageUrl    String? @map("reference_image_url")
   designNotes          String? @map("design_notes")

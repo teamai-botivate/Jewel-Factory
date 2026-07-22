@@ -13,10 +13,18 @@ import { CUSTOM_REQUEST_STATUS_OPTIONS, matchOrder, uniqueBranchOptions } from '
 type Order = { id: string; status: string; orderNumber: string; trackingNumber: string | null };
 type Request = {
   id: string; customerName: string; customerPhone: string; category: string;
-  weightGrams: string | null; purity: string | null; designNotes: string | null;
+  weightGramsMin: string | null; weightGramsMax: string | null; purity: string | null; designNotes: string | null;
   referenceImageUrl: string | null; status: string; createdAt: string; order: Order | null;
   branch: { name: string } | null;
 };
+
+function formatWeightRange(min: string | null, max: string | null): string {
+  if (!min && !max) return '';
+  const lo = min ? parseFloat(min) : null;
+  const hi = max ? parseFloat(max) : null;
+  if (lo != null && hi != null && lo !== hi) return `${lo}g – ${hi}g`;
+  return `${lo ?? hi}g`;
+}
 
 const REQ_STATUS: Record<string, string> = {
   PENDING: 'bg-yellow-50 text-yellow-800 border-yellow-200',
@@ -97,7 +105,7 @@ export default function StoreCustomDesignsPage() {
                     {r.branch?.name && <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">{r.branch.name}</span>}
                     <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${REQ_STATUS[r.status] ?? ''}`}>{r.status.toLowerCase()}</span>
                   </div>
-                  <p className="text-xs text-muted-foreground">{r.customerPhone} · {r.category}{r.weightGrams ? ` · ${r.weightGrams}g` : ''}{r.purity ? ` · ${r.purity}` : ''}</p>
+                  <p className="text-xs text-muted-foreground">{r.customerPhone} · {r.category}{formatWeightRange(r.weightGramsMin, r.weightGramsMax) ? ` · ${formatWeightRange(r.weightGramsMin, r.weightGramsMax)}` : ''}{r.purity ? ` · ${r.purity}` : ''}</p>
                 </div>
                 {expanded === r.id ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
               </button>

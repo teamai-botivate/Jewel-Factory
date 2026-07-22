@@ -23,7 +23,8 @@ export async function placeCustomRequest(input: {
   referenceImageUrl?: string;
   referenceImagePublicId?: string;
   category: string;
-  weightGrams?: number;
+  weightGramsMin?: number;
+  weightGramsMax?: number;
   purity?: string;
   designNotes?: string;
 }) {
@@ -37,7 +38,8 @@ export async function placeCustomRequest(input: {
       referenceImageUrl: input.referenceImageUrl ?? null,
       referenceImagePublicId: input.referenceImagePublicId ?? null,
       category: input.category,
-      weightGrams: input.weightGrams ?? null,
+      weightGramsMin: input.weightGramsMin ?? null,
+      weightGramsMax: input.weightGramsMax ?? null,
       purity: input.purity ?? null,
       designNotes: input.designNotes ?? null,
     },
@@ -108,7 +110,8 @@ export async function forwardCustomRequest(storeId: string, requestId: string, r
         storeNameSnapshot: store.name,
         storeAddressSnapshot: formatStoreAddress(store),
         category: req.category,
-        weightGrams: req.weightGrams,
+        weightGramsMin: req.weightGramsMin,
+        weightGramsMax: req.weightGramsMax,
         purity: req.purity,
         referenceImageUrl: req.referenceImageUrl,
         designNotes: req.designNotes,
@@ -141,7 +144,7 @@ export async function listCustomOrdersByManufacturer(manufacturerId: string) {
     orderBy: { createdAt: 'desc' },
     select: {
       id: true, orderNumber: true, storeNameSnapshot: true, storeAddressSnapshot: true,
-      category: true, weightGrams: true, purity: true, referenceImageUrl: true, designNotes: true,
+      category: true, weightGramsMin: true, weightGramsMax: true, purity: true, referenceImageUrl: true, designNotes: true,
       status: true, trackingNumber: true, createdAt: true,
     },
   });

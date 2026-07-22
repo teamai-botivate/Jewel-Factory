@@ -257,7 +257,10 @@ kioskRoutes.post('/custom-design', zValidator('json', CustomBody), async (c) => 
     customerName: body.customerName,
     customerPhone: body.customerPhone,
     category: body.category,
-    weightGrams: body.weightGrams,
+    // Legacy public kiosk form only takes a single figure — store it as an
+    // exact (min === max) range so it renders the same as before.
+    weightGramsMin: body.weightGrams,
+    weightGramsMax: body.weightGrams,
     purity: body.purity,
     designNotes: body.notes,
     referenceImageUrl: body.referenceImageUrl || undefined,
