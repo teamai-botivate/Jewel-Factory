@@ -1,10 +1,17 @@
 /**
  * Analytics API routes for sales insights across all roles.
  * GET endpoints only (read-only analytics data).
+ *
+ * Every endpoint accepts optional date-range query params, forwarded straight
+ * into lib/db/analytics-queries.ts:
+ *   ?days=7|30|90|180|365   (defaults to 30)
+ *   ?from=<ISO date>&to=<ISO date>   (wins over `days` when both given)
  */
 
+import type { Context } from 'hono';
 import { Hono } from 'hono';
 import { branchManagerGuard, storeGuard, manufacturerGuard } from '@/lib/api/guards';
+import type { DateRangeOptions } from '@/lib/db/analytics';
 import {
   getStoreManagerProductSales,
   getRetailerProductSales,
@@ -16,13 +23,28 @@ import {
 
 export const analyticsRouter = new Hono();
 
+function parseRangeFromQuery(c: Context): DateRangeOptions {
+  const from = c.req.query('from');
+  const to = c.req.query('to');
+  if (from && to) {
+    const fromDate = new Date(from);
+    const toDate = new Date(to);
+    if (!Number.isNaN(fromDate.getTime()) && !Number.isNaN(toDate.getTime())) {
+      return { from: fromDate, to: toDate };
+    }
+  }
+  const days = parseInt(c.req.query('days') || '', 10);
+  if (!Number.isNaN(days) && days > 0) return { days };
+  return {};
+}
+
 // ────────────────────────────────────────────────────────────────────────────
 // STORE MANAGER
 // ────────────────────────────────────────────────────────────────────────────
 
 /**
  * GET /api/analytics/store-manager/products
- * All products with sales data for THIS branch (last 30 days)
+ * All products with sales data for THIS branch, in the selected range.
  */
 analyticsRouter.get(
   '/store-manager/products',
@@ -30,7 +52,7 @@ analyticsRouter.get(
   async (c) => {
     try {
       const branchId = c.get('branchId') as string;
-      const data = await getStoreManagerProductSales(branchId);
+      const data = await getStoreManagerProductSales(branchId, parseRangeFromQuery(c));
       return c.json({ data });
     } catch (error) {
       console.error('[analytics] store-manager/products error:', error);
@@ -49,7 +71,7 @@ analyticsRouter.get(
   async (c) => {
     try {
       const branchId = c.get('branchId') as string;
-      const products = await getStoreManagerProductSales(branchId);
+      const products = await getStoreManagerProductSales(branchId, parseRangeFromQuery(c));
       const sorted = products.sort((a, b) => b.stars - a.stars);
       return c.json({ data: sorted });
     } catch (error) {
@@ -65,7 +87,7 @@ analyticsRouter.get(
 
 /**
  * GET /api/analytics/store/products
- * All products with sales data across ALL branches (last 30 days)
+ * All products with sales data across ALL branches, in the selected range.
  */
 analyticsRouter.get(
   '/store/products',
@@ -73,7 +95,7 @@ analyticsRouter.get(
   async (c) => {
     try {
       const storeId = c.get('storeId') as string;
-      const data = await getRetailerProductSales(storeId);
+      const data = await getRetailerProductSales(storeId, parseRangeFromQuery(c));
       return c.json({ data });
     } catch (error) {
       console.error('[analytics] store/products error:', error);
@@ -84,7 +106,9 @@ analyticsRouter.get(
 
 /**
  * GET /api/analytics/store/branches
- * Branch-wise breakdown (top products per branch, by category, by weight)
+ * Branch-wise breakdown — full per-product list per branch (frontend filters
+ * by category/sub-category/weight/units and derives topProducts/byCategory/
+ * byWeight from it), plus pre-computed defaults for a no-filter first paint.
  */
 analyticsRouter.get(
   '/store/branches',
@@ -92,7 +116,7 @@ analyticsRouter.get(
   async (c) => {
     try {
       const storeId = c.get('storeId') as string;
-      const data = await getRetailerBranchSales(storeId);
+      const data = await getRetailerBranchSales(storeId, parseRangeFromQuery(c));
       return c.json({ data });
     } catch (error) {
       console.error('[analytics] store/branches error:', error);
@@ -107,14 +131,15 @@ analyticsRouter.get(
 
 /**
  * GET /api/analytics/manufacturer/retailers
- * Retailer-wise breakdown (products per retailer)
+ * Flat per-retailer + per-product rows (category/sub-category/weight/units)
+ * for the selected range — frontend filters and groups by retailer.
  */
 analyticsRouter.get(
   '/manufacturer/retailers',
   manufacturerGuard,
   async (c) => {
     try {
-      const data = await getManufacturerRetailerSales();
+      const data = await getManufacturerRetailerSales(parseRangeFromQuery(c));
       return c.json({ data });
     } catch (error) {
       console.error('[analytics] manufacturer/retailers error:', error);
@@ -125,49 +150,17 @@ analyticsRouter.get(
 
 /**
  * GET /api/analytics/manufacturer/category-weight
- * Category + SubCategory + Weight breakdown (all retailers)
+ * Flat category/sub-category/weight/units rows (all retailers) for the
+ * selected range — frontend filters and nests (category -> sub-category ->
+ * weight range) itself so every filter combination is possible client-side.
  */
 analyticsRouter.get(
   '/manufacturer/category-weight',
   manufacturerGuard,
   async (c) => {
     try {
-      const data = await getManufacturerCategoryWeightBreakdown();
-
-      // Transform into nested structure
-      const byCategory: Record<
-        string,
-        {
-          subCategories: Record<
-            string,
-            { weights: Record<string, number>; total: number }
-          >;
-          total: number;
-        }
-      > = {};
-
-      data.forEach((row) => {
-        const cat = (row.category as string | null) || 'Other';
-        const subCat = (row.sub_category as string | null) || 'General';
-        const weight = row.weight_grams as string | number | null;
-        const units = Number(row.total_units) || 0;
-
-        if (!byCategory[cat]) {
-          byCategory[cat] = { subCategories: {}, total: 0 };
-        }
-
-        if (!byCategory[cat].subCategories[subCat]) {
-          byCategory[cat].subCategories[subCat] = { weights: {}, total: 0 };
-        }
-
-        const weightRange = getWeightRangeForDisplay(weight);
-        byCategory[cat].subCategories[subCat].weights[weightRange] =
-          (byCategory[cat].subCategories[subCat].weights[weightRange] || 0) + units;
-        byCategory[cat].subCategories[subCat].total += units;
-        byCategory[cat].total += units;
-      });
-
-      return c.json({ data: byCategory });
+      const data = await getManufacturerCategoryWeightBreakdown(parseRangeFromQuery(c));
+      return c.json({ data });
     } catch (error) {
       console.error('[analytics] manufacturer/category-weight error:', error);
       return c.json({ error: 'Failed to fetch category data' }, 500);
@@ -177,7 +170,7 @@ analyticsRouter.get(
 
 /**
  * GET /api/analytics/manufacturer/top-products
- * Top 10 best-selling products (all retailers, all time)
+ * Top N best-selling products (all retailers) in the selected range.
  */
 analyticsRouter.get(
   '/manufacturer/top-products',
@@ -185,7 +178,7 @@ analyticsRouter.get(
   async (c) => {
     try {
       const limit = parseInt(c.req.query('limit') || '10', 10);
-      const data = await getManufacturerTopProducts(Math.min(limit, 100));
+      const data = await getManufacturerTopProducts(Math.min(limit, 100), parseRangeFromQuery(c));
       return c.json({ data });
     } catch (error) {
       console.error('[analytics] manufacturer/top-products error:', error);
@@ -196,30 +189,21 @@ analyticsRouter.get(
 
 /**
  * GET /api/analytics/manufacturer/overview
- * System-wide overview (aggregates, trends)
+ * Lightweight system-wide summary for the selected range (total units +
+ * top 5 products). Full category/weight breakdown lives in /category-weight.
  */
 analyticsRouter.get(
   '/manufacturer/overview',
   manufacturerGuard,
   async (c) => {
     try {
-      const topProducts = await getManufacturerTopProducts(10);
+      const range = parseRangeFromQuery(c);
+      const [topProducts, categoryStats] = await Promise.all([
+        getManufacturerTopProducts(5, range),
+        getManufacturerCategoryWeightBreakdown(range),
+      ]);
 
-      // Calculate category distribution
-      const categoryStats = await getManufacturerCategoryWeightBreakdown();
-      const byCategory: Record<string, number> = {};
-      const byWeight: Record<string, number> = {};
-
-      categoryStats.forEach((row) => {
-        const cat = (row.category as string | null) || 'Other';
-        const units = Number(row.total_units) || 0;
-        byCategory[cat] = (byCategory[cat] || 0) + units;
-
-        const range = getWeightRangeForDisplay(row.weight_grams as string | number | null);
-        byWeight[range] = (byWeight[range] || 0) + units;
-      });
-
-      const totalUnits = Object.values(byCategory).reduce((a, b) => a + b, 0);
+      const totalUnits = categoryStats.reduce((sum, row) => sum + (Number(row.total_units) || 0), 0);
 
       return c.json({
         data: {
@@ -229,10 +213,8 @@ analyticsRouter.get(
             name: p.name as string,
             designNumber: p.design_number as string | null,
             category: p.category as string | null,
-            units: Number(p.total_units),
+            units: Number(p.total_units) || 0,
           })),
-          categoryDistribution: byCategory,
-          weightDistribution: byWeight,
         },
       });
     } catch (error) {
@@ -241,17 +223,3 @@ analyticsRouter.get(
     }
   }
 );
-
-// ────────────────────────────────────────────────────────────────────────────
-// HELPERS
-// ────────────────────────────────────────────────────────────────────────────
-
-function getWeightRangeForDisplay(weight: string | number | null | undefined): string {
-  if (!weight) return 'Unknown';
-  const w = typeof weight === 'string' ? parseFloat(weight) : weight;
-  if (w < 5) return '0-5g';
-  if (w < 10) return '5-10g';
-  if (w < 15) return '10-15g';
-  if (w < 20) return '15-20g';
-  return '20g+';
-}

@@ -25,6 +25,17 @@ export interface BranchSalesData {
   branchId: string;
   branchName: string;
   totalUnitsLast30d: number;
+  // Full per-product list for the selected range — lets the frontend filter
+  // (category/sub-category/weight/units) and re-derive topProducts/byCategory
+  // /byWeight from one consistent dataset instead of re-querying the server.
+  products: Array<{
+    productName: string;
+    category: string | null;
+    subCategory: string | null;
+    weight: number | null;
+    units: number;
+    stars: number;
+  }>;
   topProducts: Array<{
     productName: string;
     category: string | null;
@@ -140,26 +151,47 @@ export function formatDateForComparison(date: Date): string {
   return date.toISOString().split('T')[0];
 }
 
+export interface DateRangeOptions {
+  // Explicit range wins over `days` when both are given.
+  from?: Date;
+  to?: Date;
+  days?: number; // e.g. 7 / 30 / 90 / 180 / 365 — defaults to 30
+}
+
+export interface DateRangeResult {
+  windowStart: Date;
+  windowEnd: Date;
+  previousStart: Date;
+  previousEnd: Date;
+  // Earliest timestamp any query needs to scan from (== previousStart) —
+  // the base CTE filters on [historyStart, windowEnd] so it covers both
+  // the current and the trend-comparison window in one pass.
+  historyStart: Date;
+}
+
 /**
- * Get date ranges for analytics queries
+ * Get date ranges for analytics queries. Defaults to "last 30 days vs
+ * previous 30 days" (unchanged behavior) but accepts a custom `days` window
+ * or an explicit `from`/`to` range — the "previous" window is then the same
+ * length, immediately before it, for trend comparison.
  */
-export function getDateRanges(): {
-  last30dStart: Date;
-  previous30dStart: Date;
-  previous30dEnd: Date;
-  all30dStart: Date;
-} {
+export function getDateRanges(opts: DateRangeOptions = {}): DateRangeResult {
+  if (opts.from && opts.to) {
+    const windowStart = opts.from;
+    const windowEnd = opts.to;
+    const spanMs = Math.max(0, windowEnd.getTime() - windowStart.getTime());
+    const previousEnd = windowStart;
+    const previousStart = new Date(windowStart.getTime() - spanMs);
+    return { windowStart, windowEnd, previousStart, previousEnd, historyStart: previousStart };
+  }
+
+  const days = opts.days && opts.days > 0 ? opts.days : 30;
+  const spanMs = days * 24 * 60 * 60 * 1000;
   const now = new Date();
+  const windowStart = new Date(now.getTime() - spanMs);
+  const windowEnd = now;
+  const previousEnd = windowStart;
+  const previousStart = new Date(windowStart.getTime() - spanMs);
 
-  // Last 30 days: now - 30
-  const last30dStart = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-
-  // Previous 30 days: now - 60 to now - 30
-  const previous30dEnd = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-  const previous30dStart = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
-
-  // All 60 days for all-time baseline
-  const all30dStart = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
-
-  return { last30dStart, previous30dStart, previous30dEnd, all30dStart };
+  return { windowStart, windowEnd, previousStart, previousEnd, historyStart: previousStart };
 }

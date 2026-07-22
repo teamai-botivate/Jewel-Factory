@@ -7,12 +7,17 @@
  * AND b2b_order_items to the same manufacturer_products row via two separate
  * LEFT JOINs multiplies rows (cross-join effect) and corrupts SUMs — UNION ALL
  * avoids that entirely.
+ *
+ * Every function accepts an optional DateRangeOptions so callers (API routes)
+ * can pass `?days=` or `?from=&to=` through from the query string — defaults
+ * to "last 30 days vs previous 30 days" when omitted.
  */
 
 import { prisma } from '@/lib/prisma';
 import {
   ProductSalesData,
   BranchSalesData,
+  DateRangeOptions,
   calculateStars,
   calculateTrend,
   getWeightRange,
@@ -74,14 +79,15 @@ function mapSalesRow(r: ProductSalesRow): ProductSalesData {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// STORE MANAGER: Best-sellers in THIS branch (last 30 days)
+// STORE MANAGER: Best-sellers in THIS branch
 // ────────────────────────────────────────────────────────────────────────────
 
 export async function getStoreManagerProductSales(
-  branchId: string
+  branchId: string,
+  range: DateRangeOptions = {}
 ): Promise<ProductSalesData[]> {
-  const { last30dStart, previous30dStart, previous30dEnd, all30dStart } =
-    getDateRanges();
+  const { windowStart, windowEnd, previousStart, previousEnd, historyStart } =
+    getDateRanges(range);
 
   const results = await prisma.$queryRaw<ProductSalesRow[]>`
     WITH combined AS (
@@ -91,7 +97,8 @@ export async function getStoreManagerProductSales(
       WHERE ko.branch_id = ${branchId}
         AND ko.forwarded_to_manufacturer = true
         AND koi.manufacturer_product_id IS NOT NULL
-        AND ko.created_at >= ${all30dStart}::timestamp
+        AND ko.created_at >= ${historyStart}::timestamp
+        AND ko.created_at <= ${windowEnd}::timestamp
 
       UNION ALL
 
@@ -100,7 +107,8 @@ export async function getStoreManagerProductSales(
       JOIN b2b_orders bo ON boi.order_id = bo.id
       WHERE bo.branch_id = ${branchId}
         AND bo.status = 'DELIVERED'
-        AND bo.created_at >= ${all30dStart}::timestamp
+        AND bo.created_at >= ${historyStart}::timestamp
+        AND bo.created_at <= ${windowEnd}::timestamp
     )
     SELECT
       mp.id AS manufacturer_product_id,
@@ -110,8 +118,8 @@ export async function getStoreManagerProductSales(
       mp.sub_category,
       mp.weight_grams,
       mpi.secure_url,
-      COALESCE(SUM(CASE WHEN c.created_at >= ${last30dStart}::timestamp THEN c.quantity ELSE 0 END), 0) AS units_last_30d,
-      COALESCE(SUM(CASE WHEN c.created_at >= ${previous30dStart}::timestamp AND c.created_at < ${previous30dEnd}::timestamp THEN c.quantity ELSE 0 END), 0) AS units_previous_30d,
+      COALESCE(SUM(CASE WHEN c.created_at >= ${windowStart}::timestamp THEN c.quantity ELSE 0 END), 0) AS units_last_30d,
+      COALESCE(SUM(CASE WHEN c.created_at >= ${previousStart}::timestamp AND c.created_at < ${previousEnd}::timestamp THEN c.quantity ELSE 0 END), 0) AS units_previous_30d,
       COALESCE(SUM(c.quantity), 0) AS units_all_time
     FROM combined c
     JOIN manufacturer_products mp ON mp.id = c.product_id
@@ -124,14 +132,15 @@ export async function getStoreManagerProductSales(
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// RETAILER: All products ordered across ALL branches (last 30 days)
+// RETAILER: All products ordered across ALL branches
 // ────────────────────────────────────────────────────────────────────────────
 
 export async function getRetailerProductSales(
-  storeId: string
+  storeId: string,
+  range: DateRangeOptions = {}
 ): Promise<ProductSalesData[]> {
-  const { last30dStart, previous30dStart, previous30dEnd, all30dStart } =
-    getDateRanges();
+  const { windowStart, windowEnd, previousStart, previousEnd, historyStart } =
+    getDateRanges(range);
 
   const results = await prisma.$queryRaw<ProductSalesRow[]>`
     WITH combined AS (
@@ -141,7 +150,8 @@ export async function getRetailerProductSales(
       WHERE ko.store_id = ${storeId}
         AND ko.forwarded_to_manufacturer = true
         AND koi.manufacturer_product_id IS NOT NULL
-        AND ko.created_at >= ${all30dStart}::timestamp
+        AND ko.created_at >= ${historyStart}::timestamp
+        AND ko.created_at <= ${windowEnd}::timestamp
 
       UNION ALL
 
@@ -150,7 +160,8 @@ export async function getRetailerProductSales(
       JOIN b2b_orders bo ON boi.order_id = bo.id
       WHERE bo.store_id = ${storeId}
         AND bo.status = 'DELIVERED'
-        AND bo.created_at >= ${all30dStart}::timestamp
+        AND bo.created_at >= ${historyStart}::timestamp
+        AND bo.created_at <= ${windowEnd}::timestamp
     )
     SELECT
       mp.id AS manufacturer_product_id,
@@ -160,8 +171,8 @@ export async function getRetailerProductSales(
       mp.sub_category,
       mp.weight_grams,
       mpi.secure_url,
-      COALESCE(SUM(CASE WHEN c.created_at >= ${last30dStart}::timestamp THEN c.quantity ELSE 0 END), 0) AS units_last_30d,
-      COALESCE(SUM(CASE WHEN c.created_at >= ${previous30dStart}::timestamp AND c.created_at < ${previous30dEnd}::timestamp THEN c.quantity ELSE 0 END), 0) AS units_previous_30d,
+      COALESCE(SUM(CASE WHEN c.created_at >= ${windowStart}::timestamp THEN c.quantity ELSE 0 END), 0) AS units_last_30d,
+      COALESCE(SUM(CASE WHEN c.created_at >= ${previousStart}::timestamp AND c.created_at < ${previousEnd}::timestamp THEN c.quantity ELSE 0 END), 0) AS units_previous_30d,
       COALESCE(SUM(c.quantity), 0) AS units_all_time
     FROM combined c
     JOIN manufacturer_products mp ON mp.id = c.product_id
@@ -175,12 +186,16 @@ export async function getRetailerProductSales(
 
 // ────────────────────────────────────────────────────────────────────────────
 // RETAILER: Branch-wise breakdown (Store A, Store B, etc.)
+// Returns the FULL per-product list per branch (not pre-truncated/grouped)
+// so the frontend can filter (category/sub-category/weight/units) and derive
+// topProducts + byCategory + byWeight from one consistent, filtered dataset.
 // ────────────────────────────────────────────────────────────────────────────
 
 export async function getRetailerBranchSales(
-  storeId: string
+  storeId: string,
+  range: DateRangeOptions = {}
 ): Promise<BranchSalesData[]> {
-  const { last30dStart } = getDateRanges();
+  const { windowStart, windowEnd } = getDateRanges(range);
 
   const branches = await prisma.branch.findMany({
     where: { retailerId: storeId },
@@ -190,9 +205,6 @@ export async function getRetailerBranchSales(
   const branchSales: BranchSalesData[] = [];
 
   for (const branch of branches) {
-    // One query per branch, product-level, last 30 days — used for BOTH the
-    // top-products list and the category/weight breakdown (computed in JS
-    // from the same rows) so the branch's totals stay internally consistent.
     const products = await prisma.$queryRaw<ProductAggRow[]>`
       WITH combined AS (
         SELECT koi.manufacturer_product_id AS product_id, koi.quantity AS quantity
@@ -201,7 +213,8 @@ export async function getRetailerBranchSales(
         WHERE ko.branch_id = ${branch.id}
           AND ko.forwarded_to_manufacturer = true
           AND koi.manufacturer_product_id IS NOT NULL
-          AND ko.created_at >= ${last30dStart}::timestamp
+          AND ko.created_at >= ${windowStart}::timestamp
+          AND ko.created_at <= ${windowEnd}::timestamp
 
         UNION ALL
 
@@ -210,7 +223,8 @@ export async function getRetailerBranchSales(
         JOIN b2b_orders bo ON boi.order_id = bo.id
         WHERE bo.branch_id = ${branch.id}
           AND bo.status = 'DELIVERED'
-          AND bo.created_at >= ${last30dStart}::timestamp
+          AND bo.created_at >= ${windowStart}::timestamp
+          AND bo.created_at <= ${windowEnd}::timestamp
       )
       SELECT
         mp.id,
@@ -230,8 +244,8 @@ export async function getRetailerBranchSales(
     products.forEach((p) => {
       const units = Number(p.total_units) || 0;
       if (p.category) byCategory[p.category] = (byCategory[p.category] || 0) + units;
-      const range = getWeightRange(p.weight_grams ?? null);
-      byWeight[range] = (byWeight[range] || 0) + units;
+      const range2 = getWeightRange(p.weight_grams ?? null);
+      byWeight[range2] = (byWeight[range2] || 0) + units;
     });
 
     const totalUnits = Object.values(byCategory).reduce((a, b) => a + b, 0);
@@ -240,6 +254,17 @@ export async function getRetailerBranchSales(
       branchId: branch.id,
       branchName: branch.name,
       totalUnitsLast30d: totalUnits,
+      // Full list — frontend slices/filters as needed (product_id kept as `id`
+      // internally but not exposed on this shape; category/weight/units cover
+      // every filter the UI offers).
+      products: products.map((p) => ({
+        productName: p.product_name || 'Unknown',
+        category: p.category ?? null,
+        subCategory: p.sub_category ?? null,
+        weight: parseDecimal(p.weight_grams ?? null),
+        units: Number(p.total_units) || 0,
+        stars: calculateStars(Number(p.total_units) || 0),
+      })),
       topProducts: products.slice(0, 5).map((p) => ({
         productName: p.product_name || 'Unknown',
         category: p.category ?? null,
@@ -259,8 +284,10 @@ export async function getRetailerBranchSales(
 // MANUFACTURER: Retailer-wise breakdown
 // ────────────────────────────────────────────────────────────────────────────
 
-export async function getManufacturerRetailerSales(): Promise<ProductAggRow[]> {
-  const { last30dStart } = getDateRanges();
+export async function getManufacturerRetailerSales(
+  range: DateRangeOptions = {}
+): Promise<ProductAggRow[]> {
+  const { windowStart, windowEnd } = getDateRanges(range);
 
   const results = await prisma.$queryRaw<ProductAggRow[]>`
     WITH combined AS (
@@ -269,7 +296,8 @@ export async function getManufacturerRetailerSales(): Promise<ProductAggRow[]> {
       JOIN kiosk_orders ko ON koi.order_id = ko.id
       WHERE ko.forwarded_to_manufacturer = true
         AND koi.manufacturer_product_id IS NOT NULL
-        AND ko.created_at >= ${last30dStart}::timestamp
+        AND ko.created_at >= ${windowStart}::timestamp
+        AND ko.created_at <= ${windowEnd}::timestamp
 
       UNION ALL
 
@@ -277,7 +305,8 @@ export async function getManufacturerRetailerSales(): Promise<ProductAggRow[]> {
       FROM b2b_order_items boi
       JOIN b2b_orders bo ON boi.order_id = bo.id
       WHERE bo.status = 'DELIVERED'
-        AND bo.created_at >= ${last30dStart}::timestamp
+        AND bo.created_at >= ${windowStart}::timestamp
+        AND bo.created_at <= ${windowEnd}::timestamp
     )
     SELECT
       s.id AS retailer_id,
@@ -286,11 +315,12 @@ export async function getManufacturerRetailerSales(): Promise<ProductAggRow[]> {
       mp.name,
       mp.category,
       mp.sub_category,
+      mp.weight_grams,
       SUM(c.quantity) AS total_units
     FROM combined c
     JOIN stores s ON s.id = c.store_id
     JOIN manufacturer_products mp ON mp.id = c.product_id
-    GROUP BY s.id, s.name, mp.id, mp.name, mp.category, mp.sub_category
+    GROUP BY s.id, s.name, mp.id, mp.name, mp.category, mp.sub_category, mp.weight_grams
     ORDER BY s.name, total_units DESC
   `;
 
@@ -298,11 +328,14 @@ export async function getManufacturerRetailerSales(): Promise<ProductAggRow[]> {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// MANUFACTURER: Category + Weight breakdown (all retailers)
+// MANUFACTURER: Category + Weight breakdown (all retailers) — flat rows,
+// frontend filters + nests (category -> sub-category -> weight range).
 // ────────────────────────────────────────────────────────────────────────────
 
-export async function getManufacturerCategoryWeightBreakdown(): Promise<ProductAggRow[]> {
-  const { last30dStart } = getDateRanges();
+export async function getManufacturerCategoryWeightBreakdown(
+  range: DateRangeOptions = {}
+): Promise<ProductAggRow[]> {
+  const { windowStart, windowEnd } = getDateRanges(range);
 
   const results = await prisma.$queryRaw<ProductAggRow[]>`
     WITH combined AS (
@@ -311,7 +344,8 @@ export async function getManufacturerCategoryWeightBreakdown(): Promise<ProductA
       JOIN kiosk_orders ko ON koi.order_id = ko.id
       WHERE ko.forwarded_to_manufacturer = true
         AND koi.manufacturer_product_id IS NOT NULL
-        AND ko.created_at >= ${last30dStart}::timestamp
+        AND ko.created_at >= ${windowStart}::timestamp
+        AND ko.created_at <= ${windowEnd}::timestamp
 
       UNION ALL
 
@@ -319,16 +353,19 @@ export async function getManufacturerCategoryWeightBreakdown(): Promise<ProductA
       FROM b2b_order_items boi
       JOIN b2b_orders bo ON boi.order_id = bo.id
       WHERE bo.status = 'DELIVERED'
-        AND bo.created_at >= ${last30dStart}::timestamp
+        AND bo.created_at >= ${windowStart}::timestamp
+        AND bo.created_at <= ${windowEnd}::timestamp
     )
     SELECT
+      mp.id,
+      mp.name,
       mp.category,
       mp.sub_category,
       mp.weight_grams,
       SUM(c.quantity) AS total_units
     FROM combined c
     JOIN manufacturer_products mp ON mp.id = c.product_id
-    GROUP BY mp.category, mp.sub_category, mp.weight_grams
+    GROUP BY mp.id, mp.name, mp.category, mp.sub_category, mp.weight_grams
     ORDER BY mp.category, mp.sub_category, mp.weight_grams
   `;
 
@@ -336,10 +373,15 @@ export async function getManufacturerCategoryWeightBreakdown(): Promise<ProductA
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// MANUFACTURER: Top products (all retailers, all time)
+// MANUFACTURER: Top products (all retailers)
 // ────────────────────────────────────────────────────────────────────────────
 
-export async function getManufacturerTopProducts(limit = 10): Promise<ProductAggRow[]> {
+export async function getManufacturerTopProducts(
+  limit = 10,
+  range: DateRangeOptions = {}
+): Promise<ProductAggRow[]> {
+  const { windowStart, windowEnd } = getDateRanges(range);
+
   const results = await prisma.$queryRaw<ProductAggRow[]>`
     WITH combined AS (
       SELECT koi.manufacturer_product_id AS product_id, koi.quantity AS quantity
@@ -347,6 +389,8 @@ export async function getManufacturerTopProducts(limit = 10): Promise<ProductAgg
       JOIN kiosk_orders ko ON koi.order_id = ko.id
       WHERE ko.forwarded_to_manufacturer = true
         AND koi.manufacturer_product_id IS NOT NULL
+        AND ko.created_at >= ${windowStart}::timestamp
+        AND ko.created_at <= ${windowEnd}::timestamp
 
       UNION ALL
 
@@ -354,6 +398,8 @@ export async function getManufacturerTopProducts(limit = 10): Promise<ProductAgg
       FROM b2b_order_items boi
       JOIN b2b_orders bo ON boi.order_id = bo.id
       WHERE bo.status = 'DELIVERED'
+        AND bo.created_at >= ${windowStart}::timestamp
+        AND bo.created_at <= ${windowEnd}::timestamp
     )
     SELECT
       mp.id,
