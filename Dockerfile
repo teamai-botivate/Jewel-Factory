@@ -2,7 +2,7 @@
 # Next.js 15 (output:'standalone') + Prisma + pnpm. Runs `prisma migrate deploy`
 # on container start, then the standalone Next server.
 
-FROM node:20-slim AS base
+FROM node:22-slim AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 # Prisma needs openssl at build + run time.
