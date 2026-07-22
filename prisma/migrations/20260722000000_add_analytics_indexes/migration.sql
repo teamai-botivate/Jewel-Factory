@@ -23,5 +23,5 @@ CREATE INDEX IF NOT EXISTS "idx_manufacturer_products_category_subcategory" ON "
 -- Manufacturer products: weight (for weight range grouping)
 CREATE INDEX IF NOT EXISTS "idx_manufacturer_products_weight" ON "manufacturer_products"("weight_grams");
 
--- Store + branch relationship (for cross-branch queries)
-CREATE INDEX IF NOT EXISTS "idx_branches_store_id" ON "branches"("store_id");
+-- The branch hierarchy migration already creates
+-- "branches_retailer_id_idx" on "branches"("retailer_id").
