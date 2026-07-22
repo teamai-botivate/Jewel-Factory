@@ -3,6 +3,7 @@
 import { CheckCircle2, XCircle, Loader2, PencilLine, ChevronDown, ChevronUp, MessageSquare } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
+import { ImageZoomModal } from '@/components/orders/ImageZoomModal';
 import { OrderChat } from '@/components/orders/OrderChat';
 import { OrderFilters } from '@/components/orders/OrderFilters';
 import { Button } from '@/components/ui/button';
@@ -12,10 +13,18 @@ import { CUSTOM_REQUEST_STATUS_OPTIONS, matchOrder, uniqueBranchOptions } from '
 type Order = { id: string; status: string; orderNumber: string; trackingNumber: string | null };
 type Request = {
   id: string; customerName: string; customerPhone: string; category: string;
-  weightGrams: string | null; purity: string | null; designNotes: string | null;
+  weightGramsMin: string | null; weightGramsMax: string | null; purity: string | null; designNotes: string | null;
   referenceImageUrl: string | null; status: string; createdAt: string; order: Order | null;
   branch: { name: string } | null;
 };
+
+function formatWeightRange(min: string | null, max: string | null): string {
+  if (!min && !max) return '';
+  const lo = min ? parseFloat(min) : null;
+  const hi = max ? parseFloat(max) : null;
+  if (lo != null && hi != null && lo !== hi) return `${lo}g – ${hi}g`;
+  return `${lo ?? hi}g`;
+}
 
 const REQ_STATUS: Record<string, string> = {
   PENDING: 'bg-yellow-50 text-yellow-800 border-yellow-200',
@@ -39,6 +48,7 @@ export default function StoreCustomDesignsPage() {
   const [branch, setBranch] = useState('');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
+  const [zoomUrl, setZoomUrl] = useState<string | null>(null);
 
   const branchOptions = useMemo(() => uniqueBranchOptions((data ?? []).map((r) => r.branch?.name)), [data]);
   const filtered = useMemo(
@@ -95,7 +105,7 @@ export default function StoreCustomDesignsPage() {
                     {r.branch?.name && <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">{r.branch.name}</span>}
                     <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${REQ_STATUS[r.status] ?? ''}`}>{r.status.toLowerCase()}</span>
                   </div>
-                  <p className="text-xs text-muted-foreground">{r.customerPhone} · {r.category}{r.weightGrams ? ` · ${r.weightGrams}g` : ''}{r.purity ? ` · ${r.purity}` : ''}</p>
+                  <p className="text-xs text-muted-foreground">{r.customerPhone} · {r.category}{formatWeightRange(r.weightGramsMin, r.weightGramsMax) ? ` · ${formatWeightRange(r.weightGramsMin, r.weightGramsMax)}` : ''}{r.purity ? ` · ${r.purity}` : ''}</p>
                 </div>
                 {expanded === r.id ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
               </button>
@@ -103,10 +113,13 @@ export default function StoreCustomDesignsPage() {
                 <div className="border-t px-4 pb-4 pt-3 space-y-3 bg-muted/10">
                   {r.designNotes && <div><p className="text-xs text-muted-foreground uppercase tracking-wider">Notes</p><p className="text-sm">{r.designNotes}</p></div>}
                   {r.referenceImageUrl && (
-                    <a href={r.referenceImageUrl} target="_blank" rel="noopener noreferrer">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={r.referenceImageUrl} alt="reference" className="max-h-56 rounded-lg border object-contain" />
-                    </a>
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={r.referenceImageUrl}
+                      alt="reference"
+                      className="max-h-56 rounded-lg border object-contain cursor-pointer hover:shadow-md transition-shadow"
+                      onClick={() => setZoomUrl(r.referenceImageUrl || null)}
+                    />
                   )}
                   {r.status === 'FORWARDED' && r.order && (
                     <div className="rounded-lg border bg-[#fdf9f2] px-3 py-2">
@@ -148,6 +161,15 @@ export default function StoreCustomDesignsPage() {
           orderLabel={chat.label}
           viewer="HO"
           onClose={() => setChat(null)}
+        />
+      )}
+
+      {zoomUrl && (
+        <ImageZoomModal
+          isOpen={!!zoomUrl}
+          images={[zoomUrl]}
+          productName="Reference Image"
+          onClose={() => setZoomUrl(null)}
         />
       )}
     </div>

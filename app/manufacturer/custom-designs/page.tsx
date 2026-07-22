@@ -3,6 +3,7 @@
 import { Loader2, PencilLine, ChevronDown, ChevronUp } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
+import { ImageZoomModal } from '@/components/orders/ImageZoomModal';
 import { OrderFilters } from '@/components/orders/OrderFilters';
 import { Button } from '@/components/ui/button';
 import { useApi, apiSend } from '@/hooks/use-api';
@@ -10,10 +11,18 @@ import { CUSTOM_ORDER_STATUS_OPTIONS, matchOrder, uniqueBranchOptions } from '@/
 
 type Order = {
   id: string; orderNumber: string; storeNameSnapshot: string; storeAddressSnapshot: string;
-  category: string; weightGrams: string | null; purity: string | null;
+  category: string; weightGramsMin: string | null; weightGramsMax: string | null; purity: string | null;
   referenceImageUrl: string | null; designNotes: string | null;
   status: string; trackingNumber: string | null; createdAt: string;
 };
+
+function formatWeightRange(min: string | null, max: string | null): string {
+  if (!min && !max) return '';
+  const lo = min ? parseFloat(min) : null;
+  const hi = max ? parseFloat(max) : null;
+  if (lo != null && hi != null && lo !== hi) return `${lo}g – ${hi}g`;
+  return `${lo ?? hi}g`;
+}
 
 const STATUS: Record<string, string> = {
   PENDING: 'bg-yellow-100 text-yellow-800', CONFIRMED: 'bg-blue-100 text-blue-800',
@@ -31,6 +40,7 @@ export default function ManufacturerCustomDesignsPage() {
   const [retailer, setRetailer] = useState('');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
+  const [zoomUrl, setZoomUrl] = useState<string | null>(null);
 
   const retailerOptions = useMemo(() => uniqueBranchOptions((data ?? []).map((o) => o.storeNameSnapshot)), [data]);
   const filtered = useMemo(
@@ -84,17 +94,20 @@ export default function ManufacturerCustomDesignsPage() {
               {expanded === o.id && (
                 <div className="border-t bg-muted/10 px-4 pb-4 pt-3 space-y-3">
                   <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
-                    {o.weightGrams && <div><p className="text-xs text-muted-foreground">Weight</p><p>{o.weightGrams}g</p></div>}
+                    {formatWeightRange(o.weightGramsMin, o.weightGramsMax) && <div><p className="text-xs text-muted-foreground">Weight</p><p>{formatWeightRange(o.weightGramsMin, o.weightGramsMax)}</p></div>}
                     {o.purity && <div><p className="text-xs text-muted-foreground">Purity</p><p>{o.purity}</p></div>}
                     {o.trackingNumber && <div><p className="text-xs text-muted-foreground">Tracking</p><p className="font-mono text-xs">{o.trackingNumber}</p></div>}
                   </div>
                   <div><p className="text-xs text-muted-foreground uppercase tracking-wider">Ship to (store address)</p><p className="text-sm">{o.storeAddressSnapshot}</p></div>
                   {o.designNotes && <div><p className="text-xs text-muted-foreground uppercase tracking-wider">Design Notes</p><p className="text-sm">{o.designNotes}</p></div>}
                   {o.referenceImageUrl && (
-                    <a href={o.referenceImageUrl} target="_blank" rel="noopener noreferrer">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={o.referenceImageUrl} alt="reference" className="max-h-56 rounded-lg border object-contain" />
-                    </a>
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={o.referenceImageUrl}
+                      alt="reference"
+                      className="max-h-56 rounded-lg border object-contain cursor-pointer hover:shadow-md transition-shadow"
+                      onClick={() => setZoomUrl(o.referenceImageUrl)}
+                    />
                   )}
                   <div className="rounded-lg bg-blue-50 border border-blue-100 px-3 py-2 text-xs text-blue-700">Customer details are not shared. Ship to the store address above.</div>
                   {NEXT[o.status] && (
@@ -107,6 +120,15 @@ export default function ManufacturerCustomDesignsPage() {
             </div>
           ))}
         </div>
+      )}
+
+      {zoomUrl && (
+        <ImageZoomModal
+          isOpen={!!zoomUrl}
+          images={[zoomUrl]}
+          productName="Reference Image"
+          onClose={() => setZoomUrl(null)}
+        />
       )}
     </div>
   );

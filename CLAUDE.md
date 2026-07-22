@@ -70,6 +70,7 @@ components/
   manufacturer/ ProductForm (image + tryon upload)
   kiosk/        StoreContext, KioskHeader, ProductCard
   orders/       OrderChat (per-order HO↔Store-Manager chat, reused both sides)
+                ImageZoomModal (clickable product images with lightbox zoom)
   ar/           ARViewport
 lib/
   prisma.ts, env.ts, auth.ts (3 HMAC cookies), password.ts (bcrypt), slug.ts,
@@ -182,6 +183,79 @@ full LuxeMatch-style storefront (hero/catalog/try-on/search/custom/restock) + My
 - **Nav** — removed "Kiosk PIN" from the Retailer sidebar (managed per-Store on Branches); "Store Profile" → "**Retailer Profile**". (The old HO Manager sidebar is gone — the Retailer/Head Office has the full menu.)
 - **Order filters (all lists)** — reusable `components/orders/OrderFilters.tsx` + `lib/order-filters.ts`: order-ID search + status dropdown + **From/To date range** (on `createdAt`) everywhere; **Store (branch) filter** on HO lists (kiosk/custom/b2b) with a branch badge per row; **Retailer filter** on Manufacturer lists (kiosk/custom/orders); Store Manager My Orders searches by order-ID + derived status bucket + date range. HO custom list gained `branch{name}` via `listCustomRequests`.
 - **Wordmark** — landing + About navbars use a **"JEWEL FACTORY" text wordmark** (`FACTORY` in gold `#c9a84c`), NOT `public/logo-wordmark.png` — that PNG still shows "LUXEMATCH", so don't use it. Favicon is `public/logo-icon.png`.
+
+## Latest updates (branch: `feature/order-image-zoom`)
+
+**Abhay's UI Refinements (8 commits on `renderdep`):**
+- **Auth UI consolidation** — `PortalLoginScreen.tsx` + `PortalShell.tsx` reusable components consolidate login + registration; all 4 sign-in screens (Retailer, Manufacturer, Store Manager, Register) share one look.
+- **Store Manager layout polish** — Mobile hamburger nav + page-title tracking (tabs show "Catalog | Search | ...") + store-logo fallback favicon.
+- **Landing page assets** — Wordmark component + new branding AVIF logos (JF monogram, Jewel Factory logo, store medallion fallback, register hero image).
+- **Responsive fixes** — Mobile-friendly hero headings + padding tweaks.
+- **Code quality** — Variable renaming (p → product, res → response), alphabetized imports, useEffect cleanup (cancelled flag).
+- **Render deploy config** — `render.yaml` + `.env.example` clarified for Blueprint env prompts (BRANCH_MANAGER_SECRET, AI_FEATURES_URL, AI_FEATURES_API_KEY).
+- **AR viewport enhancements** — `fill` prop for full-screen immersive try-on + `onCameraAspectRatioChange` callback for responsive camera.
+
+**Order Image Zoom Feature (ALL 8 order pages + new component):**
+- **New component:** `components/orders/ImageZoomModal.tsx` — Lightbox modal (click image → zoom, next/prev for galleries, close via × or Escape).
+- **Product details shown:** Product Name + Design Number (from `productDesignSnapshot` on B2B; from FK lookup on kiosk). Custom orders show "Reference Image".
+- **Integrated on all 8 pages:**
+  - Store Manager: `/store-manager/my-orders` (kiosk/custom/restock tabs)
+  - Retailer (HO): `/store/{pending-approvals, kiosk-orders, b2b-orders, custom-designs}` 
+  - Manufacturer: `/manufacturer/{kiosk-orders, orders/[id], custom-designs}`
+- **UX:** Thumbnail click → modal. Multiple images render gallery counter + next/prev arrows. Close × top-right, ESC key, click outside.
+
+**Landing Page Animation Demo (Hero → Features Section):**
+- **New section** added right after hero (`app/page.tsx` lines ~152–190): "Find similar designs with AI in seconds." — **AI-Powered branding throughout**
+- **AI Similar Image Search workflow animation (4s loop, wide max-w-5xl, compact height py-8/12):**
+  1. Upload box appears (0–0.6s): Search icon scales in, "Drag & drop or click to upload" text
+  2. Search progress (0.4–0.7s): 3 pulsing dots + "Searching similar designs…" (loads while upload fades)
+  3. Results appear (2.5s+): 4 catalog products in horizontal grid fade-in + scale, **"AI found similar designs"** label
+  - Real workflow demo: upload → AI search → results discovered
+  - Demonstrates the AI-powered visual-search feature so visitors understand the capability
+- **Layout:** Single column, wider container (max-w-5xl, not max-w-2xl). Compact padding: card p-5, boxes p-4/5, results grid 4 cols. Slides in from bottom (y: 24) on scroll trigger via `whileInView`.
+- **Purpose:** Showcase AI-powered Similar Search with realistic animation so visitors instantly see the intelligent discovery feature on the landing page.
+
+**Similar Design Search for Retailers (Head Office):**
+- **Feature:** Retailers now have the same AI-powered similar design search as Store Managers
+- **Implementation:**
+  - New API endpoint: `POST /api/store/search/image` (store-portal.ts) — protected by `storeGuard`
+  - New UI page: `/store/similar-search` (upload image → find similar catalog pieces)
+  - Same visual-search logic: embed image → search Qdrant vector DB → return similar manufacturer products
+  - New menu item in Retailer sidebar under "Operations" section
+- **Usage:** Retailer can upload a jewelry photo to discover visually similar pieces from the manufacturer catalog
+- **Same as:** Store Manager search feature (`/store-manager/search`), but accessible from Retailer portal
+
+**AI Category-Aware Theme Generation:**
+- **Problem:** AI-generated images had no consistency per product category. Necklaces looked different from bangles, creating a disjointed catalog.
+- **Solution:** Pass `category` + `subCategory` to ALL AI endpoints (`/describe`, `/catalog`, `/transparent`)
+- **Implementation (components/manufacturer/ProductForm.tsx):**
+  - New helper: `aiFormWithCategory()` — includes category + subCategory in FormData
+  - Updated `aiCatalog()` — uses new helper to send category info
+  - Updated `aiTransparent()` — uses new helper to send category info
+  - `aiDescribe()` already sent category (no change needed)
+- **Result:** AI-Features service receives category context and can generate:
+  - **Consistent backgrounds per category** (all necklaces have similar aesthetic)
+  - **Themed product presentations** (bangles style ≠ necklace style)
+  - **Cohesive catalog appearance** across same category/subcategory
+- **Next step:** AI-Features service (`../Jewel-Factory_AI`) must use category in prompts to apply category-specific themes
+
+**Sales Analytics & Star Ratings (branch: `feature/sales-analytics`):**
+- **Multi-role analytics system** showing sales insights for Store Manager, Retailer (HO), and Manufacturer
+- **Star Ratings on Catalogs:** Every product shows ⭐ stars (1-5) based on last 30 days sales + trend indicator (↑ up, ↓ down, → stable)
+  * Star mapping: 0-10 units → ⭐ | 11-30 → ⭐⭐ | 31-60 → ⭐⭐⭐ | 61-100 → ⭐⭐⭐⭐ | 100+ → ⭐⭐⭐⭐⭐
+  * Trend: Compares last 30 days vs previous 30 days (5% threshold); shows % change
+- **Backend:** `lib/db/analytics.ts` (helpers) + `lib/db/analytics-queries.ts` (raw SQL aggregations) + `lib/api/routes/analytics.ts` (8 GET endpoints)
+- **Analytics Endpoints (all guarded):**
+  * `/api/analytics/store-manager/restock` → Best-sellers in branch (sorted by stars)
+  * `/api/analytics/store/branches` → Branch-wise breakdown (top products, by category, by weight)
+  * `/api/analytics/manufacturer/overview` → Top 10, category/weight distribution (all retailers)
+- **UI Components:** `components/ui/StarRating.tsx` + `components/ui/TrendBadge.tsx`
+- **Intelligence Pages:**
+  * Store Manager: `/store-manager/restock` — Table of best-sellers (sortable by stars/units/trend)
+  * Retailer: `/store/intelligence` — Branch selector, top products, category/weight breakdowns
+  * Manufacturer: `/manufacturer/intelligence` — System overview, top products, distributions
+- **Data Scoping:** Store Manager sees THIS branch only; Retailer sees ALL branches; Manufacturer sees ALL retailers
+- **Queries use raw SQL** for complex date-range aggregations (last 30d vs previous 30d); results include snapshots (category, weight, product name) stored at order time
 
 ## Gotchas
 

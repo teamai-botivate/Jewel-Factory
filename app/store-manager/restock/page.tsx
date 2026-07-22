@@ -75,6 +75,7 @@ export default function StoreManagerRestockPage() {
       placeEndpoint="/api/branch-manager/restock-orders"
       notePlaceholder="Any note for Head Office (optional)…"
       onPlaced={(o) => setPlaced(o.orderNumber ?? 'placed')}
+      showPopularity
     />
   );
 }

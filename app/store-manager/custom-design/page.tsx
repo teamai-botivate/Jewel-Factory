@@ -11,7 +11,7 @@ import { CATEGORIES, subCategoriesFor } from '@/lib/categories';
 const PURITIES = ['24K', '22K', '18K', '14K', '916', '750', '585'];
 
 export default function StoreManagerCustomDesignPage() {
-  const [form, setForm] = useState({ category: CATEGORIES[0], subCategory: '', weight: '', purity: '', notes: '', imageUrl: '' });
+  const [form, setForm] = useState({ category: CATEGORIES[0], subCategory: '', weightFrom: '', weightTo: '', purity: '', notes: '', imageUrl: '' });
   const [subCustom, setSubCustom] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -50,12 +50,25 @@ export default function StoreManagerCustomDesignPage() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+
+    const from = form.weightFrom ? Number(form.weightFrom) : undefined;
+    const to = form.weightTo ? Number(form.weightTo) : undefined;
+    // A single figure counts as an exact weight (min === max); if both are
+    // given but entered backwards, swap rather than reject.
+    let weightGramsMin = from ?? to;
+    let weightGramsMax = to ?? from;
+    if (from !== undefined && to !== undefined && to < from) {
+      weightGramsMin = to;
+      weightGramsMax = from;
+    }
+
     setLoading(true);
     try {
       await apiPost('/api/branch-manager/custom-designs', {
         category: form.category,
         subCategory: form.subCategory.trim() || undefined,
-        weightGrams: form.weight ? Number(form.weight) : undefined,
+        weightGramsMin,
+        weightGramsMax,
         purity: form.purity || undefined,
         designNotes: form.notes.trim() || undefined,
         referenceImageUrl: form.imageUrl.trim() || undefined,
@@ -70,7 +83,7 @@ export default function StoreManagerCustomDesignPage() {
         <div className="flex h-14 w-14 items-center justify-center rounded-full bg-green-100 text-green-700"><CheckCircle2 className="h-7 w-7" /></div>
         <h1 className="mt-4 font-display text-2xl font-medium">Request sent</h1>
         <p className="mt-2 text-sm text-muted-foreground">Sent to Head Office for approval.</p>
-        <Button className="mt-6 metal-sheen text-[#17120b] font-semibold" onClick={() => { setDone(false); setForm({ category: CATEGORIES[0], subCategory: '', weight: '', purity: '', notes: '', imageUrl: '' }); }}>New request</Button>
+        <Button className="mt-6 metal-sheen text-[#17120b] font-semibold" onClick={() => { setDone(false); setForm({ category: CATEGORIES[0], subCategory: '', weightFrom: '', weightTo: '', purity: '', notes: '', imageUrl: '' }); }}>New request</Button>
       </div>
     );
   }
@@ -117,7 +130,15 @@ export default function StoreManagerCustomDesignPage() {
             </div>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
-            <div><label className="text-xs font-medium text-muted-foreground">Weight (g)</label><Input className="mt-1 h-10" type="number" step="0.1" value={form.weight} onChange={(e) => set('weight', e.target.value)} /></div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Weight range (g) <span className="font-normal">(optional)</span></label>
+              <div className="mt-1 flex items-center gap-2">
+                <Input type="number" step="0.01" min="0" inputMode="decimal" placeholder="From" value={form.weightFrom} onChange={(e) => set('weightFrom', e.target.value)} className="h-10" />
+                <span className="text-xs text-muted-foreground">to</span>
+                <Input type="number" step="0.01" min="0" inputMode="decimal" placeholder="To" value={form.weightTo} onChange={(e) => set('weightTo', e.target.value)} className="h-10" />
+              </div>
+              <p className="mt-1 text-[11px] text-muted-foreground">Leave "To" blank for an exact weight.</p>
+            </div>
             <div>
               <label className="text-xs font-medium text-muted-foreground">Purity</label>
               <select className="mt-1 h-10 w-full rounded-lg border border-black/15 bg-white/60 px-3 text-sm" value={form.purity} onChange={(e) => set('purity', e.target.value)}>

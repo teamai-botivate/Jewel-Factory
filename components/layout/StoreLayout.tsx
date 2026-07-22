@@ -2,7 +2,7 @@
 
 import {
   LayoutDashboard, Package, ShoppingBag, PencilLine, ClipboardCheck,
-  BarChart3, Lightbulb, Store as StoreIcon, Settings, Gem, Building2,
+  BarChart3, Lightbulb, Store as StoreIcon, Settings, Gem, Building2, Search,
 } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
@@ -18,6 +18,7 @@ const NAV = [
   { label: 'Dashboard', href: '/store/dashboard', icon: LayoutDashboard, section: 'Overview' },
   { label: 'Pending Approvals', href: '/store/pending-approvals', icon: ClipboardCheck, section: 'Operations' },
   { label: 'Manufacturer Catalog', href: '/store/manufacturer-catalog', icon: Gem, section: 'Operations' },
+  { label: 'Similar Design Search', href: '/store/similar-search', icon: Search, section: 'Operations' },
   { label: 'B2B Orders', href: '/store/b2b-orders', icon: Package, section: 'Operations' },
   { label: 'Kiosk Orders', href: '/store/kiosk-orders', icon: ShoppingBag, section: 'Operations' },
   { label: 'Custom Designs', href: '/store/custom-designs', icon: PencilLine, section: 'Operations' },

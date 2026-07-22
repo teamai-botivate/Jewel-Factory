@@ -151,6 +151,75 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── Features Demo: AI Similar Search Animation ── */}
+      <section className="border-t border-black/5 bg-white">
+        <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
+          <motion.div initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '-60px' }} transition={{ duration: 0.5 }} className="mb-8 text-center">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#a0824a]">AI-Powered Search</p>
+            <h2 className="mt-2 font-display text-3xl font-normal tracking-tight sm:text-4xl">Find similar designs with AI in seconds.</h2>
+          </motion.div>
+
+          <div>
+            {/* Similar Image Search */}
+            <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '-60px' }} transition={{ duration: 0.6 }} className="rounded-2xl border bg-gradient-to-br from-[#fdf9f5] to-[#ede7dd] p-5">
+              <div className="mb-4">
+                <p className="text-sm font-semibold text-primary">AI Similar Design Search</p>
+                <h3 className="mt-0.5 text-lg font-medium">Upload a jewelry photo</h3>
+              </div>
+
+              {/* Upload + Search Progress Animation */}
+              <div className="mb-4 space-y-2.5">
+                {/* Step 1: Upload Box */}
+                <motion.div
+                  initial={{ opacity: 1 }} animate={{ opacity: [1, 1, 0] }} transition={{ duration: 4, repeat: Infinity, times: [0, 0.6, 1] }}
+                  className="rounded-xl border-2 border-dashed border-primary/30 bg-white/60 p-5 text-center"
+                >
+                  <motion.div animate={{ scale: [1, 1.1, 1] }} transition={{ duration: 1.5, repeat: Infinity }} className="inline-block">
+                    <Search className="mx-auto h-7 w-7 text-primary" />
+                  </motion.div>
+                  <p className="mt-2 text-xs text-muted-foreground">Drag & drop or click to upload</p>
+                </motion.div>
+
+                {/* Step 2: Searching */}
+                <motion.div
+                  initial={{ opacity: 0 }} animate={{ opacity: [0, 1, 1, 0] }} transition={{ duration: 4, repeat: Infinity, times: [0, 0.4, 0.7, 1] }}
+                  className="rounded-xl border-2 border-primary/20 bg-primary/5 p-4 text-center"
+                >
+                  <div className="flex items-center justify-center gap-2">
+                    <motion.div animate={{ scale: [1, 1.3, 1] }} transition={{ duration: 0.8, repeat: Infinity }} className="h-2.5 w-2.5 rounded-full bg-primary" />
+                    <motion.div animate={{ scale: [1, 1.3, 1] }} transition={{ duration: 0.8, delay: 0.2, repeat: Infinity }} className="h-2.5 w-2.5 rounded-full bg-primary" />
+                    <motion.div animate={{ scale: [1, 1.3, 1] }} transition={{ duration: 0.8, delay: 0.4, repeat: Infinity }} className="h-2.5 w-2.5 rounded-full bg-primary" />
+                  </div>
+                  <p className="mt-3 text-sm text-primary font-medium">Searching similar designs…</p>
+                </motion.div>
+              </div>
+
+              {/* Results Animation */}
+              <div className="space-y-1.5">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">AI found similar designs</p>
+                <div className="grid grid-cols-4 gap-2">
+                  {showcase && showcase.slice(0, 4).map((p, i) => {
+                    const img = primaryImg(p);
+                    return (
+                      <motion.div
+                        key={p.id}
+                        initial={{ opacity: 0, scale: 0.8, y: 12 }} whileInView={{ opacity: 1, scale: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 2.5 + i * 0.15, duration: 0.5 }}
+                        className="overflow-hidden rounded-lg border bg-[#ece5da] ring-2 ring-offset-2 ring-primary/30"
+                      >
+                        {img ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={img} alt={p.name} className="aspect-square h-full w-full object-cover" />
+                        ) : <div className="aspect-square flex items-center justify-center"><Gem className="h-5 w-5 text-muted-foreground/30" /></div>}
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
       {/* ── Featured showcase (real catalog, no price) ────────────────────── */}
       <section id="showcase" className="scroll-mt-20 border-t border-black/5 bg-[#fbf9f5]/70">
         <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">

@@ -281,6 +281,8 @@ model ManufacturerProduct {
 
   @@index([status])
   @@index([category])
+  @@index([category, subCategory])
+  @@index([weightGrams])
   @@map("manufacturer_products")
 }
 
@@ -431,6 +433,7 @@ model B2bOrder {
   @@index([storeId])
   @@index([manufacturerId])
   @@index([status])
+  @@index([branchId, status, createdAt])
   @@map("b2b_orders")
 }
 
@@ -519,6 +522,8 @@ model KioskOrder {
   @@index([storeId])
   @@index([manufacturerId])
   @@index([status])
+  @@index([branchId, forwardedToManufacturer, createdAt])
+  @@index([forwardedToManufacturer])
   @@map("kiosk_orders")
 }
 
@@ -568,7 +573,10 @@ model CustomDesignRequest {
   referenceImageUrl      String?      @map("reference_image_url")
   referenceImagePublicId String?      @map("reference_image_public_id")
   category               String
-  weightGrams            Decimal?     @map("weight_grams") @db.Decimal(8, 3)
+  // Jewellery weight is rarely exact — captured as a range (equal min/max if
+  // the store manager only knows one figure).
+  weightGramsMin         Decimal?     @map("weight_grams_min") @db.Decimal(8, 3)
+  weightGramsMax         Decimal?     @map("weight_grams_max") @db.Decimal(8, 3)
   purity                 String?
   designNotes            String?      @map("design_notes")
   status                 CustomStatus @default(PENDING)
@@ -599,7 +607,8 @@ model CustomDesignOrder {
   storeNameSnapshot    String  @map("store_name_snapshot")
   storeAddressSnapshot String  @map("store_address_snapshot")
   category             String
-  weightGrams          Decimal? @map("weight_grams") @db.Decimal(8, 3)
+  weightGramsMin       Decimal? @map("weight_grams_min") @db.Decimal(8, 3)
+  weightGramsMax       Decimal? @map("weight_grams_max") @db.Decimal(8, 3)
   purity               String?
   referenceImageUrl    String? @map("reference_image_url")
   designNotes          String? @map("design_notes")

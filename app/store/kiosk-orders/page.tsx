@@ -3,6 +3,7 @@
 import { Loader2, ShoppingBag, ChevronDown, ChevronUp } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
+import { ImageZoomModal } from '@/components/orders/ImageZoomModal';
 import { OrderFilters } from '@/components/orders/OrderFilters';
 import { useApi } from '@/hooks/use-api';
 import { KIOSK_B2B_STATUS_OPTIONS, matchOrder, uniqueBranchOptions } from '@/lib/order-filters';
@@ -24,6 +25,7 @@ const STATUS: Record<string, string> = {
 export default function StoreKioskOrdersPage() {
   const { data, error, loading } = useApi<Order[]>('/api/store/kiosk-orders', '/store/login');
   const [open, setOpen] = useState<string | null>(null);
+  const [zoomItem, setZoomItem] = useState<Item | null>(null);
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
   const [branch, setBranch] = useState('');
@@ -87,7 +89,12 @@ export default function StoreKioskOrdersPage() {
                         <div key={it.id} className="flex items-center gap-3">
                           {it.productImageSnapshot ? (
                             // eslint-disable-next-line @next/next/no-img-element
-                            <img src={it.productImageSnapshot} alt={it.productNameSnapshot} className="h-20 w-20 flex-shrink-0 rounded-lg border bg-white object-contain p-1" />
+                            <img
+                              src={it.productImageSnapshot}
+                              alt={it.productNameSnapshot}
+                              className="h-20 w-20 flex-shrink-0 rounded-lg border bg-white object-contain p-1 cursor-pointer hover:shadow-md transition-shadow"
+                              onClick={() => setZoomItem(it)}
+                            />
                           ) : <div className="h-20 w-20 flex-shrink-0 rounded-lg border bg-muted" />}
                           <div className="min-w-0 flex-1">
                             <p className="truncate text-sm font-medium">{it.productNameSnapshot}</p>
@@ -103,6 +110,15 @@ export default function StoreKioskOrdersPage() {
             </div>
           ))}
         </div>
+      )}
+
+      {zoomItem?.productImageSnapshot && (
+        <ImageZoomModal
+          isOpen={!!zoomItem}
+          images={[zoomItem.productImageSnapshot]}
+          productName={zoomItem.productNameSnapshot}
+          onClose={() => setZoomItem(null)}
+        />
       )}
     </div>
   );
