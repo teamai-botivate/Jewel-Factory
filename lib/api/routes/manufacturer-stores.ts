@@ -64,6 +64,7 @@ const EditBody = z.object({
   email: z.string().email().optional(),
   city: z.string().optional(),
   phone: z.string().optional(),
+  extraBranchAllowance: z.coerce.number().int().min(0).optional(),
 });
 
 manufacturerStoreRoutes.patch('/stores/:id', zValidator('json', EditBody), async (c) => {

@@ -143,6 +143,11 @@ model Store {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  // Every retailer may create 2 branches (Stores) for free. To go beyond that
+  // they contact the manufacturer, who grants extra allowance here (editable,
+  // not one-time) — effective limit = 2 + extraBranchAllowance.
+  extraBranchAllowance Int @default(0) @map("extra_branch_allowance")
+
   managers       StoreManager[]
   branches       Branch[]
   products       Product[]

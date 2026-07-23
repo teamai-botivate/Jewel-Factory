@@ -7,7 +7,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useApi, apiSend } from '@/hooks/use-api';
 
-type Store = { id: string; name: string; slug: string; email: string; city: string | null; phone: string | null; isActive: boolean; registrationStatus: string };
+type Store = {
+  id: string; name: string; slug: string; email: string; city: string | null; phone: string | null;
+  isActive: boolean; registrationStatus: string; extraBranchAllowance: number; branchCount: number;
+};
+
+const FREE_BRANCH_LIMIT = 2;
 
 export default function ManufacturerStoresPage() {
   const { data, error, loading, reload } = useApi<Store[]>('/api/manufacturer/stores', '/manufacturer/login');
@@ -46,6 +51,9 @@ export default function ManufacturerStoresPage() {
                 <p className="truncate text-xs text-muted-foreground">{s.email}{s.city ? ` · ${s.city}` : ''}{s.phone ? ` · ${s.phone}` : ''}</p>
               </div>
               <div className="flex items-center gap-2">
+                <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground" title="Stores used / allowed (2 free + manufacturer-granted extra)">
+                  Stores {s.branchCount}/{FREE_BRANCH_LIMIT}{s.extraBranchAllowance > 0 ? `+${s.extraBranchAllowance}` : ''}
+                </span>
                 <button onClick={() => toggle(s)} className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${s.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}`}>
                   {s.isActive ? 'Active' : 'Inactive'}
                 </button>
@@ -65,13 +73,20 @@ export default function ManufacturerStoresPage() {
 }
 
 function EditModal({ store, onClose, onSaved }: { store: Store; onClose: () => void; onSaved: () => void }) {
-  const [form, setForm] = useState({ name: store.name, email: store.email, city: store.city ?? '', phone: store.phone ?? '' });
+  const [form, setForm] = useState({
+    name: store.name, email: store.email, city: store.city ?? '', phone: store.phone ?? '',
+    extraBranchAllowance: String(store.extraBranchAllowance),
+  });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   async function save() {
     setBusy(true); setErr(null);
-    try { await apiSend('PATCH', `/api/manufacturer/stores/${store.id}`, form); onSaved(); }
-    catch (e) { setErr(e instanceof Error ? e.message : 'Failed'); } finally { setBusy(false); }
+    const extra = parseInt(form.extraBranchAllowance, 10);
+    if (Number.isNaN(extra) || extra < 0) { setErr('Extra stores must be 0 or more.'); setBusy(false); return; }
+    try {
+      await apiSend('PATCH', `/api/manufacturer/stores/${store.id}`, { ...form, extraBranchAllowance: extra });
+      onSaved();
+    } catch (e) { setErr(e instanceof Error ? e.message : 'Failed'); } finally { setBusy(false); }
   }
   return (
     <Modal onClose={onClose} title="Edit store">
@@ -79,6 +94,21 @@ function EditModal({ store, onClose, onSaved }: { store: Store; onClose: () => v
       <Input placeholder="Email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
       <Input placeholder="City" value={form.city} onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))} />
       <Input placeholder="Phone" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} />
+      <div>
+        <label className="mb-1 block text-xs font-medium text-muted-foreground">
+          Extra stores granted (free limit is {FREE_BRANCH_LIMIT} — set after an agreement with this retailer)
+        </label>
+        <Input
+          type="number"
+          min={0}
+          placeholder="Extra stores (0 = default 2 only)"
+          value={form.extraBranchAllowance}
+          onChange={(e) => setForm((f) => ({ ...f, extraBranchAllowance: e.target.value }))}
+        />
+        <p className="mt-1 text-[11px] text-muted-foreground">
+          Effective limit: {FREE_BRANCH_LIMIT} + {parseInt(form.extraBranchAllowance, 10) || 0} = {FREE_BRANCH_LIMIT + (parseInt(form.extraBranchAllowance, 10) || 0)} stores
+        </p>
+      </div>
       {err && <p className="text-sm text-red-600">{err}</p>}
       <div className="flex gap-2"><Button onClick={save} disabled={busy} className="metal-sheen text-[#17120b] font-semibold flex-1">{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save'}</Button><Button variant="outline" onClick={onClose}>Cancel</Button></div>
     </Modal>

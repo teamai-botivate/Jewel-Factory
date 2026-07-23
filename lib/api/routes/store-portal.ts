@@ -118,8 +118,11 @@ storePortalRoutes.get('/branches', storeGuard, async (c) => {
 
 storePortalRoutes.post('/branches', storeGuard, zValidator('json', BranchBody), async (c) => {
   const b = c.req.valid('json');
-  const branch = await createBranch(c.get('storeId'), b as Parameters<typeof createBranch>[1]);
-  return sendData(c, branch, 201);
+  const result = await createBranch(c.get('storeId'), b as Parameters<typeof createBranch>[1]);
+  if ('error' in result) {
+    return sendError(c, 'conflict', `You've reached your store limit (${result.limit}). Contact the manufacturer to add more.`, 409);
+  }
+  return sendData(c, result.branch, 201);
 });
 
 storePortalRoutes.patch('/branches/:id', storeGuard, zValidator('json', BranchBody.partial()), async (c) => {

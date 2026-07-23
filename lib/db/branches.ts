@@ -32,8 +32,20 @@ export function getBranch(retailerId: string, branchId: string) {
   return prisma.branch.findFirst({ where: { id: branchId, retailerId } });
 }
 
-export function createBranch(retailerId: string, input: BranchInput) {
-  return prisma.branch.create({
+export const FREE_BRANCH_LIMIT = 2;
+
+export async function createBranch(
+  retailerId: string,
+  input: BranchInput,
+): Promise<{ error: 'limit_reached'; limit: number } | { branch: Awaited<ReturnType<typeof prisma.branch.create>> }> {
+  const [store, activeCount] = await Promise.all([
+    prisma.store.findUnique({ where: { id: retailerId }, select: { extraBranchAllowance: true } }),
+    prisma.branch.count({ where: { retailerId, isActive: true } }),
+  ]);
+  const limit = FREE_BRANCH_LIMIT + (store?.extraBranchAllowance ?? 0);
+  if (activeCount >= limit) return { error: 'limit_reached', limit };
+
+  const branch = await prisma.branch.create({
     data: {
       retailerId,
       name: input.name,
@@ -46,6 +58,7 @@ export function createBranch(retailerId: string, input: BranchInput) {
       isActive: input.isActive ?? true,
     },
   });
+  return { branch };
 }
 
 export async function updateBranch(retailerId: string, branchId: string, input: Partial<BranchInput>) {

@@ -4,14 +4,16 @@ import { hashPassword } from '@/lib/password';
 // ── Manufacturer-side store management ────────────────────────────────────────
 
 export async function listStoresByManufacturer(manufacturerId: string) {
-  return prisma.store.findMany({
+  const stores = await prisma.store.findMany({
     where: { manufacturerId },
     orderBy: { createdAt: 'desc' },
     select: {
       id: true, name: true, slug: true, email: true, city: true, phone: true,
-      isActive: true, registrationStatus: true, createdAt: true,
+      isActive: true, registrationStatus: true, createdAt: true, extraBranchAllowance: true,
+      _count: { select: { branches: { where: { isActive: true } } } },
     },
   });
+  return stores.map(({ _count, ...s }) => ({ ...s, branchCount: _count.branches }));
 }
 
 export async function listPendingRegistrations() {
@@ -60,7 +62,7 @@ export async function rejectRegistration(storeId: string) {
 export async function updateStoreByManufacturer(
   manufacturerId: string,
   storeId: string,
-  input: { name?: string; email?: string; city?: string; phone?: string },
+  input: { name?: string; email?: string; city?: string; phone?: string; extraBranchAllowance?: number },
 ) {
   const store = await prisma.store.findFirst({ where: { id: storeId, manufacturerId }, select: { id: true } });
   if (!store) return null;
@@ -71,8 +73,9 @@ export async function updateStoreByManufacturer(
       ...(input.email !== undefined ? { email: input.email.toLowerCase().trim() } : {}),
       ...(input.city !== undefined ? { city: input.city } : {}),
       ...(input.phone !== undefined ? { phone: input.phone } : {}),
+      ...(input.extraBranchAllowance !== undefined ? { extraBranchAllowance: input.extraBranchAllowance } : {}),
     },
-    select: { id: true, name: true, email: true, city: true, phone: true },
+    select: { id: true, name: true, email: true, city: true, phone: true, extraBranchAllowance: true },
   });
 }
 
