@@ -12,6 +12,24 @@ import { CATEGORIES, subCategoriesFor } from '@/lib/categories';
 const PURITIES = ['24K', '22K', '18K', '14K', '916', '750', '585'];
 const JEWELLERY_TYPES = ['necklace', 'earring_left', 'earring_right', 'ring_index', 'ring_middle', 'bangle'] as const;
 
+// Auto-suggest the AR try-on jewellery type from the selected category — the
+// "Jewellery type" dropdown used to always default to 'necklace' regardless of
+// category, so picking "Bangles" and clicking Generate All silently produced a
+// necklace-shaped try-on asset for a bangle. Categories with no clean 1:1 AR
+// mapping (Bindiya/Mangtika, Ear Chain Kannoti, JF Coin, Men's Collection,
+// Nath/Nose Ring) are left out — the manufacturer picks manually for those.
+const CATEGORY_TO_JEWELLERY_TYPE: Record<string, (typeof JEWELLERY_TYPES)[number]> = {
+  Bangles: 'bangle',
+  Bracelet: 'bangle',
+  Chain: 'necklace',
+  Earrings: 'earring_left',
+  Mangalsutra: 'necklace',
+  Pendants: 'necklace',
+  Rings: 'ring_middle',
+  Set: 'necklace',
+  Watch: 'bangle',
+};
+
 export type ProductFormData = {
   id?: string;
   name: string;
@@ -239,6 +257,12 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
     const category = e.target.value;
     setForm((p) => ({ ...p, category, subCategory: '' })); // reset sub on category change
     setSubCustom(false);
+    // Keep the AR "Jewellery type" dropdown in sync with the category so
+    // Generate All doesn't silently produce a necklace-shaped try-on for a
+    // bangle (or similar mismatch) just because the manufacturer forgot to
+    // switch it manually.
+    const suggested = CATEGORY_TO_JEWELLERY_TYPE[category];
+    if (suggested) setTryonType(suggested);
   }
 
   function onSubSelectChange(e: React.ChangeEvent<HTMLSelectElement>) {
