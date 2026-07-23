@@ -327,7 +327,7 @@ pnpm db:seed
 
 Ye banayega:
 
-- **1 Manufacturer** — login: `admin@atjewellers.com` / password: `manufacturer123`
+- **1 Manufacturer** — login: `admin@atjewellers.com` / password from `SEED_MANUFACTURER_PASSWORD`
 - **10 Categories** (Ring, Earring, Necklace, etc.)
 
 **Testing ke liye ek demo store bhi chahiye?** (recommended pehli baar):
@@ -345,8 +345,7 @@ Ye ek approved demo store bhi banayega:
 - Store owner (Retailer / Head Office): `store@demo.com` / `store123`
 - Kiosk URL: `http://localhost:3000/demo`
 
-> **Production ke liye:** `manufacturer123` password turant badal dena. Ya seed se
-> pehle apna password set karo:
+> **Production ke liye:** seed se pehle apna password set karo:
 >
 > ```bash
 > $env:SEED_MANUFACTURER_PASSWORD="MeraStrongPassword"; pnpm db:seed
@@ -390,7 +389,7 @@ Browser mein khol ke test karo:
 | --------------------------------------------- | ---------------------------------------------------------- |
 | `http://localhost:3000`                     | Branded Jewel Factory landing (navbar + featured catalog + **Login popup**: Retailer \| Store Manager) |
 | `http://localhost:3000/about`               | About page (linked from landing navbar) |
-| `http://localhost:3000/manufacturer/login`  | `admin@atjewellers.com` / `manufacturer123` (Manufacturer — hidden admin entry) |
+| `http://localhost:3000/manufacturer/login`  | `admin@atjewellers.com` / password from `SEED_MANUFACTURER_PASSWORD` (Manufacturer — hidden admin entry) |
 | `http://localhost:3000/store/login`         | `store@demo.com` / `store123` — **Retailer** (owner / Head Office) |
 | `http://localhost:3000/store/branches`      | Retailer: manage **Stores (branches)** + store managers + restock PIN |
 | `http://localhost:3000/store-manager/login` | **Store Manager** (no default login — create one in /store/branches first) |
@@ -444,7 +443,7 @@ pnpm typecheck        # type errors check
 | Image upload fail              | Cloudinary ke teeno values +`NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` bhare hain?         |
 | Search "warming up"            | Embedder set nahi (STEP 5) — ye normal hai agar skip kiya                            |
 | Password reset email nahi aaya | SMTP set nahi to link**terminal/console mein** print hoga — wahan se copy karo |
-| Manufacturer login fail        | Seed chalaya?`pnpm db:seed`. Password `manufacturer123`                           |
+| Manufacturer login fail        | Seed chalaya? `SEED_MANUFACTURER_PASSWORD` sahi value ke saath `pnpm db:seed`. |
 
 ---
 

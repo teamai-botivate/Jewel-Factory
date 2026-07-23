@@ -60,7 +60,7 @@ login URLs bhi use kar sakte ho.
 
 | Role | Login page | Demo Email | Demo Password |
 |------|-----------|------------|---------------|
-| **Manufacturer** | `/manufacturer/login` | `admin@atjewellers.com` | `manufacturer123` |
+| **Manufacturer** | `/manufacturer/login` | `admin@atjewellers.com` | Password set in the database |
 | **Retailer** (owner / Head Office) | `/store/login` | `store@demo.com` | `store123` |
 | **Store Manager** | `/store-manager/login` | *(banana padega — niche §7)* | *(jo banate waqt set karo)* |
 

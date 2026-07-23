@@ -137,7 +137,8 @@ pnpm db:deploy        # SAARI migrations apply — poora schema ek command me ba
                       #   (5 migrations: init → kiosk_pin → b2b_item_image
                       #    → branch_hierarchy → order_messages). Koi manual SQL nahi.
 
-pnpm db:seed          # 1 manufacturer (admin@atjewellers.com / manufacturer123) + 14 categories
+SEED_MANUFACTURER_PASSWORD="<strong-password>" pnpm db:seed
+# 1 manufacturer (admin@atjewellers.com / env-set password) + 14 categories
 ```
 
 Apna manufacturer password/email seed pe set karna ho:

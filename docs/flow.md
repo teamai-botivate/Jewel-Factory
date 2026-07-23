@@ -237,7 +237,7 @@ The old "HO Manager" login (`/store/manager/login` + `jf_manager`) is **removed*
 `BRANCH_MANAGER_SECRET` (optional; falls back to `MANAGER_SECRET`).
 
 **Demo credentials** (after `pnpm db:seed`): Manufacturer `admin@atjewellers.com` /
-`manufacturer123`; Retailer (demo mode) `store@demo.com` / `store123`. Store Managers
+the password set with `SEED_MANUFACTURER_PASSWORD`; Retailer (demo mode) `store@demo.com` / `store123`. Store Managers
 are created by the Retailer — no default account.
 
 ---
