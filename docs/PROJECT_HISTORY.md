@@ -34,11 +34,16 @@ search).
 
 | Repo | Where | Notes |
 |---|---|---|
-| **Jewel Factory** (this app) | `github.com/teamai-botivate/Jewel-Factory` | Active branch: **`retailer-multistore`** — ALL current work is here. `master` is the older pre-hierarchy state. **Before handover, merge `retailer-multistore` → `master`** and point Render at it. |
-| **AI-Features** | `github.com/teamai-botivate/Jewel-Factory_AI` (local `../AI-Features`) | Branch `main`. One Python/FastAPI service for all AI. Deployed at HF Space `Botivate2026/ai-workspace` → `https://botivate2026-ai-workspace.hf.space`. |
+| **Jewel Factory** (this app) | `github.com/ATjewellers01/Jewel-Factory` (client `origin`) + `github.com/teamai-botivate/Jewel-Factory` (team `teamai`, `feature/sales-analytics` kept in sync) | Active branch: **`master`** — `retailer-multistore` was merged in (as of the 2026-07-24 session it shows merged; this doc previously said the opposite — that was stale). Team's `teamai` remote's `feature/sales-analytics` branch mirrors client `master`, by deliberate choice (keeps the team repo's own `master` untouched). |
+| **AI-Features** | `github.com/teamai-botivate/Jewel-Factory_AI` (+ mirror `github.com/ATjewellers01/Jewel-Factory-AI`, both kept in sync; local `../AI-Features`) | Branch `main`. One Python/FastAPI service for all AI. Deployed at HF Space `Botivate2026/ai-workspace` → `https://botivate2026-ai-workspace.hf.space`. |
 | **LuxeMatch** (old) | `github.com/teamai-botivate/B2B_Luxmatch` (local `../LuxeMatch`) | The original monorepo this was rebuilt from. **Reference only** — the blueprint is `../LuxeMatch/JEWEL_FACTORY_SYSTEM_DESIGN.txt`. Not needed to run the app. |
 
-**Deploy:** Jewel Factory is on **Render** (`jewel-factory.onrender.com`). AI on the HF Space.
+**Deploy:** Jewel Factory has **TWO known production targets**: the original **Render**
+(`jewel-factory.onrender.com`) and, since 2026-07-22, **AWS EC2** (`13.126.65.154`,
+Docker, RDS + pgvector + S3/CloudFront — see `AWS_MIGRATION.md`), confirmed live via
+SSH on 2026-07-24. **Whether Render is still serving traffic in parallel, or was
+retired when AWS went live, is unconfirmed** — don't assume either without checking.
+AI stays on the HF Space regardless of which app deploy is live.
 
 **Workspace layout (keep the three repos as SIBLINGS in one parent folder** — the
 `../LuxeMatch` and `../AI-Features` relative paths in the docs depend on this):
@@ -204,21 +209,136 @@ opens the device's normal image picker. Both paths feed the same preview and
 similarity-search request, and the action pair stacks into full-width touch
 targets on mobile.
 
+### 3.14 Sales Analytics & Star Ratings
+**Why:** the owner wanted a way to see which products are actually selling —
+per-branch for Store Managers, across all branches for the Retailer, system-wide
+for the Manufacturer — instead of a flat catalog with no signal on performance.
+Every catalog product now shows a **1–5 star rating** (last-30-days units sold:
+0-10→⭐, 11-30→⭐⭐, 31-60→⭐⭐⭐, 61-100→⭐⭐⭐⭐, 100+→⭐⭐⭐⭐⭐) plus a trend
+arrow (↑/↓/→, last 30d vs previous 30d, 5% threshold). Backend is raw SQL
+(`lib/db/analytics-queries.ts`) — a `UNION ALL` CTE combines kiosk + B2B order
+items **before** joining to `manufacturer_products` once, specifically to avoid
+the cross-join row-multiplication bug that two separate `LEFT JOIN`s would cause.
+New pages: Store Manager `/store-manager/restock` (best-sellers, this branch),
+Retailer `/store/intelligence` (branch selector + breakdowns, all branches),
+Manufacturer `/manufacturer/intelligence` (system-wide, all retailers). Built on
+branch `feature/sales-analytics`, later merged into `master`.
+
+**Bug found + fixed much later (2026-07-24, see §3.17):** three of the
+manufacturer-facing query functions returned Postgres `SUM()` results (a JS
+`BigInt`) straight to `c.json()` without converting to `Number` first —
+`JSON.stringify` can't serialize `BigInt`, so all three Manufacturer Intelligence
+endpoints 500'd once real order data existed to sum. Dev/staging DBs being empty
+is why this went unnoticed for a while.
+
+### 3.15 Similar Design Search extended to Retailers
+The Store Manager's AI-powered visual (photo) search — upload a jewelry photo,
+find visually similar catalog pieces via OpenCLIP embeddings — was extended to
+the **Retailer (Head Office)** portal too (`POST /api/store/search/image`,
+`/store/similar-search` page, same embed-and-search logic, new sidebar item under
+"Operations"). Also surfaced on the public landing page + About page as a live
+demo (upload → search → results, `app/page.tsx`) so visitors understand the
+capability before registering.
+
+### 3.16 AI category-aware theme generation
+**Problem:** AI-generated catalog/try-on images had no visual consistency across
+a category — necklaces and bangles looked stylistically unrelated, and the
+catalog read as disjointed. **Fix:** `category` + `subCategory` are now passed to
+every AI-Features endpoint (`/describe`, `/catalog`, `/transparent`) via a new
+`aiFormWithCategory()` helper in `components/manufacturer/ProductForm.tsx`, so the
+AI service can apply category-specific themes/backgrounds consistently. The
+Python-side prompt work to actually USE that category context for themed
+generation was flagged as a next step for `../AI-Features` — check
+`lib/prompts.py` there for whether it was completed.
+
+### 3.17 AWS production migration (executed by Abhay, 2026-07-22)
+**Why:** move off Render/Supabase/Cloudinary/Qdrant/HF-for-app-hosting onto AWS
+for production. Executed in one commit (`fe95556 feat: migrate production
+services to AWS`), phase-by-phase per the original plan in `AWS_MIGRATION.md`
+(now rewritten to reflect what actually happened, since it originally read as an
+unexecuted plan):
+- **DB:** Supabase → **AWS RDS Postgres**.
+- **Vectors:** Qdrant → **pgvector** in the same RDS (new column + migration
+  `20260722090000_pgvector`; `lib/search.ts` internals swapped, function names
+  kept so callers didn't change).
+- **Storage:** Cloudinary → **S3 + CloudFront** (`lib/cloudinary.ts` deleted,
+  replaced by new `lib/storage.ts`; presigned S3 PUT uploads).
+- **App:** Render → **EC2 via Docker** (deviates from the original PM2/nginx/
+  certbot plan — simpler to just run the existing Dockerfile; TLS/domain via
+  `sslip.io` rather than a real domain + Let's Encrypt).
+- **AI-Features deliberately NOT moved** — it stays on the HF Space, called
+  externally from the EC2 app exactly as Render called it. No reason to migrate a
+  separately-deployed, already-working service.
+
+**This was undiscovered/undocumented in this history file until the next session
+(§3.18)** — CLAUDE.md and this file both still described Cloudinary/Qdrant/Render
+as current for two days after the migration actually happened and shipped.
+
+### 3.18 Production debugging session (2026-07-24) — found the AWS deploy, fixed Intelligence 500s
+The owner reported the Manufacturer Intelligence page showing "Could not load
+intelligence data" (500s on 3 endpoints) and asked to fix it. This had been
+investigated in an earlier session via static code review alone (no bug found,
+because the bug only manifests with real data — see §3.14). This session:
+1. **Got SSH access** to the AWS EC2 box (`13.126.65.154`) that had been blocked
+   earlier by a Security Group IP restriction — the restriction had since been
+   lifted (or the assistant's IP changed to one already allowed).
+2. **Discovered the AWS production deployment** existed at all and was live —
+   found the RDS DB, S3/CloudFront, Docker container, confirming §3.17 had
+   actually happened (this had not been communicated/documented anywhere the
+   assistant had access to before this session).
+3. **Reproduced the bug live**: tailed `docker logs -f` for 90s while asking the
+   owner to reload the Intelligence page in their browser, capturing the real
+   stack trace: `TypeError: Do not know how to serialize a BigInt`.
+4. **Root-caused and fixed**: `getManufacturerRetailerSales`,
+   `getManufacturerCategoryWeightBreakdown`, `getManufacturerTopProducts` in
+   `lib/db/analytics-queries.ts` returned raw `$queryRaw` rows (with a `BigInt`
+   `total_units` from `SUM()`) directly to the client. Fixed by mapping
+   `total_units` through `Number(...)` before returning — matching the pattern
+   `getRetailerBranchSales` already used correctly.
+5. **Also fixed (pending from an earlier session):** hid "Analytics" from the
+   Retailer sidebar (`components/layout/StoreLayout.tsx`) without deleting the
+   page — the owner was explicit that "remove" and "hide" are NOT the same thing
+   and corrected a prior misunderstanding sharply. `/store/analytics` still works
+   directly; its data duplicates `/store/intelligence`'s stat cards.
+6. **AI image-generation cost analysis** — verified real OpenAI pricing (not
+   guessed) for the manufacturer's "Generate with AI" feature: ~₹57 per "Generate
+   All" click at the likely-actual default (`quality="auto"` resolves to High for
+   our detailed prompts, since no route sets `quality=` explicitly), ~₹15 if
+   forced to Medium. Documented in `../AI-Features/CLAUDE.md`. Also surfaced a
+   **critical flag**: `gpt-image-1` (the model the transparent-background step of
+   try-on generation depends on for its native `background="transparent"`
+   support) **retires 2026-10-23** — must be re-tested/repointed before then or
+   the try-on pipeline breaks.
+7. **Incidental secret exposure**: while diagnosing over SSH, a `sed` redaction
+   pattern missed the `DATABASE_URL=` line and the RDS database password was
+   printed in plaintext into the session transcript. Flagged to the owner;
+   rotating that password is now in `PENDING.md`.
+8. **Docs corrected** (this file, `CLAUDE.md`, `AWS_MIGRATION.md`, `PENDING.md`) —
+   they had been describing a pre-AWS-migration, pre-merge state for two days
+   after the actual code/infra had moved on. Lesson for future agents: **when
+   debugging production, check whether there's an AWS deploy before assuming
+   Render is the only one** — this doc will hopefully now save that rediscovery.
+
 ---
 
-## 4. What's PENDING (see docs/PENDING.md for the live checklist)
+## 4. What's PENDING (see docs/PENDING.md for the live checklist — this section is a summary, PENDING.md is the source of truth)
 
-1. **Merge `retailer-multistore` → `master`** and **redeploy Render** from it — the
-   live site may still be running older code.
-2. **OpenAI credit** — AI generate returns 429 until billing is added (or a funded
-   `OPENAI_API_KEY` is set on the HF Space + restart).
-3. **Rotate secrets** — live secrets were exposed in chat once (Supabase pwd,
-   Cloudinary secret, Qdrant key, Gmail app pwd, auth secrets). Rotate them in the
-   dashboards before real use. **Never commit secrets.**
-4. **Live end-to-end test** — all flows on the deployed site.
-5. **Embedder/visual-search live verify** (HF `/embed` + Qdrant).
-6. **AWS migration** — planned in `docs/AWS_MIGRATION.md` (RDS + pgvector + S3/
-   CloudFront + EC2), not executed. Owner has the AWS .pem, will do it later.
+1. ~~Merge `retailer-multistore` → `master`~~ — **DONE**, `master` is now the
+   active branch (see §3.17/§3.18).
+2. ~~AWS migration~~ — **DONE** (§3.17): RDS + pgvector + S3/CloudFront + EC2/Docker,
+   all confirmed live. **What's still open:** confirm whether Render is retired or
+   still live in parallel; document the actual EC2 redeploy (rebuild+restart)
+   command — it's not automatic on `git push`.
+3. **Rotate secrets** — the **AWS RDS database password** was freshly exposed in
+   plaintext during the 2026-07-24 debugging session (see §3.18) — rotate it.
+   Also still outstanding from earlier: Supabase (dev) DB pwd, Gmail app pwd, the
+   4 auth secrets. Cloudinary/Qdrant secrets are now moot (retired in prod).
+4. **Live end-to-end test** — all flows, on whichever deploy target is
+   authoritative (Render vs AWS EC2 — see #2).
+5. **OpenAI quota** — appeared resolved as of 2026-07-24 (a successful generation
+   was observed), not exhaustively re-verified.
+6. **`gpt-image-1` deprecation (2026-10-23)** — the transparent-background step of
+   AI try-on generation depends on it; re-test/repoint before that date (§3.18).
 
 ---
 
@@ -231,8 +351,12 @@ targets on mobile.
   say this, do NOT touch code — describe what you'll do and ask to confirm. Only
   start after they say "start" / "do" / "yes".
 - **Push after each change:** the owner asks you to **commit + push** each finished
-  change (usually to `retailer-multistore`). Commit messages end with the
-  `Co-Authored-By: Claude ...` trailer (see the git log for the exact format).
+  change (to `master` now that `retailer-multistore` is merged in). Commit messages
+  end with the `Co-Authored-By: Claude ...` trailer (see the git log for the exact
+  format). **Careful with remotes:** `origin` = client repo (`ATjewellers01`) —
+  push `master` there directly; `teamai` = team repo — push to its
+  `feature/sales-analytics` branch (`git push teamai master:feature/sales-analytics`),
+  NOT `teamai`'s own `master` — the owner has corrected this mix-up before.
 - **Verify before pushing:** run `pnpm typecheck` (and `pnpm build` for structural
   changes / new pages) before committing. Both must pass.
 - **Explain trade-offs, then recommend one option** — the owner picks. Use short,
@@ -257,7 +381,7 @@ git clone https://github.com/teamai-botivate/Jewel-Factory_AI.git "AI-Features" 
 git clone https://github.com/teamai-botivate/Jewel-Factory.git "Jewel Factory"   # main app
 
 cd "Jewel Factory"
-git checkout retailer-multistore     # all current work is here
+# master is now the active branch (retailer-multistore was merged in — see §3.17/3.18)
 pnpm install                         # deps + prisma generate
 cp .env.example .env                 # then fill it — see docs/HANDOVER.md (rotate leaked secrets)
 pnpm db:deploy && pnpm db:seed       # schema + 1 manufacturer (+ demo retailer if SEED_DEMO_STORE=true)
@@ -279,6 +403,6 @@ the Retailer (no default).
 - [`HANDOVER.md`](HANDOVER.md) — fresh client setup, zero to live.
 - [`DATABASE.md`](DATABASE.md) — schema reference.
 - [`SETUP_GUIDE.md`](SETUP_GUIDE.md) — detailed dev setup.
-- [`DEPLOY_RENDER.md`](DEPLOY_RENDER.md) — Render deploy. [`AWS_MIGRATION.md`](AWS_MIGRATION.md) — AWS plan.
+- [`DEPLOY_RENDER.md`](DEPLOY_RENDER.md) — Render deploy. [`AWS_MIGRATION.md`](AWS_MIGRATION.md) — the AWS production deploy (done, not just a plan — RDS/pgvector/S3/EC2).
 - [`PENDING.md`](PENDING.md) — live remaining-work checklist.
 - **This file** — history, decisions, owner preferences.

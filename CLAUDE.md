@@ -13,7 +13,7 @@ Same features, same UI, zero dead code. Built phase-by-phase from
 `Jewel Factory/` (this app). The `../LuxeMatch` and `../AI-Features` relative paths
 in the docs depend on this layout. Clone order + commands: `docs/PROJECT_HISTORY.md` §6.
 
-**Stack:** Next.js 15 (App Router) + Hono BFF + Prisma (Supabase Postgres) +
+**Stack:** Next.js 15 (App Router) + Hono BFF + Prisma (Postgres — Supabase for dev, **AWS RDS in production**, see `docs/AWS_MIGRATION.md`) +
 Tailwind v4 (CSS-first, no config file) + shadcn/ui (new-york) + lucide + motion.
 **Single app** — NO monorepo, NO `packages/*`. Everything under `app/`, `components/`, `lib/`, `hooks/`.
 
@@ -74,8 +74,8 @@ components/
   ar/           ARViewport
 lib/
   prisma.ts, env.ts, auth.ts (3 HMAC cookies), password.ts (bcrypt), slug.ts,
-  reset-token.ts, email.ts, cloudinary.ts, upload-client.ts, design-number.ts,
-  search.ts (embedder+qdrant), ar-engine/ (copied wholesale)
+  reset-token.ts, email.ts, storage.ts (S3 presigned upload), upload-client.ts, design-number.ts,
+  search.ts (embedder+pgvector), ar-engine/ (copied wholesale)
   categories.ts (14-category taxonomy + sub-categories), format.ts (titleCaseName/formatWeight)
   api/  app.ts, envelope.ts, guards.ts, routes/* (incl. branch-manager.ts)
   db/   manufacturer-catalog, manufacturer-dashboard, stores, store-read, store-dashboard,
@@ -122,9 +122,9 @@ Guards in `lib/api/guards.ts`: `manufacturerGuard`, `storeGuard` (retailer/owner
 
 ## External services (same as old system)
 
-- **Cloudinary** — signed direct upload (`lib/cloudinary.ts`). Buckets: catalog, tryon (png only), logo.
-- **Qdrant** — one collection `QDRANT_MANUFACTURER_COLLECTION` (customers search manufacturer catalog).
-- **OpenCLIP embedder** — 512-d visual search (`lib/search.ts`, `EMBEDDER_URL`, `POST /embed/image`, Bearer auth). Indexing fire-and-forget on image add.
+- **S3 + CloudFront** — signed direct upload (`lib/storage.ts`, presigned PUT via `@aws-sdk/client-s3` + `s3-request-presigner`; public reads via `S3_PUBLIC_BASE_URL`/CloudFront). Buckets/folders: catalog, tryon (png only), logo, custom. **Replaced Cloudinary** (migrated 2026-07-22, see `docs/AWS_MIGRATION.md`) — `lib/cloudinary.ts` is deleted; `CLOUDINARY_*` vars in `lib/env.ts` are optional/unused leftovers, don't rely on them.
+- **pgvector (in RDS)** — `manufacturer_product_embeddings.embedding vector(512)` column, cosine-distance search via raw SQL in `lib/search.ts`. **Replaced Qdrant** (same migration) — no `QDRANT_*` env vars exist anymore.
+- **OpenCLIP embedder** — 512-d visual search (`lib/search.ts`, `EMBEDDER_URL`, `POST /embed/image`, Bearer auth). Indexing fire-and-forget on image add. **Still external** — this did NOT move to EC2 with the rest of the stack; it stays on the AI-Features HF Space (`botivate2026-ai-workspace.hf.space`), called over the internet from the EC2 app the same way Render called it.
 - **AI-Features service** (separate Python repo: `github.com/teamai-botivate/Jewel-Factory_AI`, deploy on HF Docker Space) — **ONE service for all AI**: `/catalog`, `/transparent`, `/describe` (OpenAI, gated by `x-api-key`=`AI_FEATURES_API_KEY`) **and** `/embed/*` (OpenCLIP, merged in — same contract as the old embedder). Env: `AI_FEATURES_URL` + `AI_FEATURES_API_KEY`. **The embedder is now part of this service** — point `EMBEDDER_URL` at the same Space (`/embed/image` unchanged). If `AI_FEATURES_URL` is unset, the manufacturer "Generate with AI" button is hidden and manual add works as before.
   - **Manufacturer Add Design → "Generate with AI"**: raw photo (temp, not saved) → `/api/manufacturer/ai/{describe,catalog,transparent}` (server proxy `lib/api/routes/manufacturer-ai.ts`, forwards with `x-api-key`) → auto-fills name/description + catalog image + transparent try-on PNG. All editable; regenerate + custom `extraInstructions` supported. Uses the existing `handleImageUpload`/`handleTryonUpload` flow (base64 → File).
 - **SMTP** — password reset + store-approval email (`lib/email.ts`; logs to console if unset, never blocks the flow). On Render: use **port 465** (587 is blocked → `ETIMEDOUT`) and the transporter forces **`family: 4`** (Render can't reach Gmail over IPv6 → `ENETUNREACH`). `lib/email.ts` logs `[email] sent to …` / `[email] send FAILED: …` so Render Logs show the real reason.
@@ -142,24 +142,49 @@ pnpm migrate:branches               # Option-A: default "Main Store" branch per 
 
 ## Setup for a fresh DB
 
-1. `cp .env.example .env` — fill DATABASE_URL + DIRECT_URL (Supabase), secrets (min 32 chars: MANUFACTURER/STORE/MANAGER/**BRANCH_MANAGER**), Cloudinary, Qdrant, EMBEDDER_URL (+ optional AI_FEATURES_URL/AI_FEATURES_API_KEY for AI generate), SMTP. No `NEXT_PUBLIC_SUPABASE_*` — app uses Postgres directly, not Supabase Auth.
-2. `pnpm db:deploy` (runs all 5 migrations → full schema, no manual SQL) then `pnpm db:seed` (1 manufacturer + 14 categories).
+1. `cp .env.example .env` — fill DATABASE_URL + DIRECT_URL (Postgres — Supabase for dev, or RDS in production, see `docs/AWS_MIGRATION.md`), secrets (min 32 chars: MANUFACTURER/STORE/MANAGER/**BRANCH_MANAGER**), AWS S3 (`AWS_REGION`/`AWS_S3_BUCKET`/`S3_PUBLIC_BASE_URL` + IAM creds or role), EMBEDDER_URL (+ optional AI_FEATURES_URL/AI_FEATURES_API_KEY for AI generate), SMTP. No `NEXT_PUBLIC_SUPABASE_*` — app uses Postgres directly, not Supabase Auth. (Cloudinary/Qdrant env vars are legacy-optional, not needed on a fresh setup.)
+2. `pnpm db:deploy` (runs all 8 migrations → full schema, no manual SQL) then `pnpm db:seed` (1 manufacturer + 14 categories).
 3. `pnpm dev`.
 **New agent / new machine? Read [`docs/PROJECT_HISTORY.md`](docs/PROJECT_HISTORY.md) first** — full backstory, every big decision + why, what's pending, and how the owner likes to work. It gives you the same context the previous agent had.
 
 **All docs live in `docs/` (except this file + `README.md`, which stay at the repo root).**
 Handover / client onboarding: `docs/HANDOVER.md` (zero-to-live). Schema: `docs/DATABASE.md`.
 Full system flow: `docs/flow.md`. Detailed dev setup: `docs/SETUP_GUIDE.md`. Render deploy:
-`docs/DEPLOY_RENDER.md`. AWS migration plan: `docs/AWS_MIGRATION.md`. Pending work / checklist:
-`docs/PENDING.md`. End-user (non-technical) guide with roles + demo login credentials +
-step-by-step workflows: `docs/USER_MANUAL.md`.
+`docs/DEPLOY_RENDER.md`. AWS migration (now the live production deploy): `docs/AWS_MIGRATION.md`.
+Pending work / checklist: `docs/PENDING.md`. End-user (non-technical) guide with roles + demo
+login credentials + step-by-step workflows: `docs/USER_MANUAL.md`.
 
-## Migrations (5, all Prisma-managed, idempotent)
-`0001 jewel_factory` · `kiosk_pin` · `b2b_item_image` · `branch_hierarchy` (branches + branch_managers + branch_id/requirement_note on orders + nullable PII) · `order_messages` (order_messages table + OrderKind/MessageSender enums + completed_at on kiosk/b2b/custom). `pnpm db:deploy` applies all. `migrate:categories`/`migrate:branches` = one-off upgrades for an EXISTING DB only.
+## Production deployments (TWO targets exist — know which one you're debugging)
+
+| | Render | AWS EC2 (primary production) |
+|---|---|---|
+| App | `jewel-factory.onrender.com`, `pnpm render-start` | Docker container `jewel-factory` on `13.126.65.154`, image tag = git commit hash (e.g. `jewel-factory-prod:529b664`), reverse-proxied via `13-126-65-154.sslip.io` |
+| DB | Supabase Postgres | **AWS RDS Postgres** (`database-1.c98u4y6sk2lz.ap-south-1.rds.amazonaws.com`, db `jewel_factory`) |
+| Storage | — | **S3 + CloudFront** (bucket `atjewellers01-jewel-factory-prod-*`, see `lib/storage.ts`) |
+| Vector search | — | **pgvector** in the same RDS (see External services) |
+| AI-Features | HF Space | **Same HF Space** (`botivate2026-ai-workspace.hf.space`) — AI-Features was NOT moved to EC2, stays external on both deploys |
+| Migrations | manual (`pnpm render-start` or Docker) | **auto-applied on container start** (`prisma migrate deploy` runs before `next start` — confirmed via container boot log: "Applying database migrations... No pending migrations to apply.") |
+| SSH | — | `ssh -i jewel-factory-prod-<date>.pem ec2-user@13.126.65.154` (Amazon Linux 2023, passwordless `sudo`, app runs in Docker — `sudo docker logs jewel-factory`, `sudo docker exec jewel-factory ...`) |
+
+**To redeploy AWS after a code fix:** the running container is tagged to a specific commit — merging to `master` alone does NOT update it. Rebuild the Docker image at the new commit and restart the container on the EC2 host (ask whoever owns the deploy script/CI for the exact rebuild command — not yet documented here as of 2026-07-24).
+
+Whether Render is still actively used alongside AWS EC2, or AWS is now the sole production target, was **not confirmed this session** — check with the team before assuming Render is retired.
+
+## Migrations (8, all Prisma-managed, idempotent)
+`0001 jewel_factory` · `kiosk_pin` · `b2b_item_image` · `branch_hierarchy` (branches + branch_managers + branch_id/requirement_note on orders + nullable PII) · `order_messages` (order_messages table + OrderKind/MessageSender enums + completed_at on kiosk/b2b/custom) · `add_analytics_indexes` · `custom_design_weight_range` · `pgvector` (adds the `vector(512)` embedding column on `manufacturer_product_embeddings`, used by pgvector search — see External services). `pnpm db:deploy` applies all. `migrate:categories`/`migrate:branches` = one-off upgrades for an EXISTING DB only.
 
 ## Status
 
-**Latest session — public landing + docs reorg:**
+**Latest session (2026-07-24) — AWS prod bug hunt + docs correction:**
+- **`retailer-multistore` is merged into `master`** — the paragraphs below that say "master stays at the pre-hierarchy state, merge before handover" are now **stale/incorrect**; `master` is the active branch (confirmed via `git status`) and is what's actually deployed. Don't re-attempt that merge.
+- **AWS EC2 is now a live production deployment**, alongside (or instead of — unconfirmed) Render. See the new "Production deployments" section above for full detail (RDS, S3+CloudFront, pgvector, SSH access). This was discovered/verified this session via direct SSH — it was not previously documented here.
+- **Fixed: Manufacturer Intelligence page 500s** (`/manufacturer/retailers`, `/manufacturer/top-products`, `/manufacturer/category-weight`) — root-caused via live container logs (`sudo docker logs jewel-factory`) to `TypeError: Do not know how to serialize a BigInt`. `getManufacturerRetailerSales`/`getManufacturerCategoryWeightBreakdown`/`getManufacturerTopProducts` in `lib/db/analytics-queries.ts` returned raw `$queryRaw` rows straight to `c.json()`; Postgres `SUM()` comes back as a JS `BigInt`, which `JSON.stringify` can't serialize — only crashed once real order data existed to sum (empty dev/staging DBs never hit it). Fixed by mapping `total_units` through `Number(...)` before returning, matching the pattern `getRetailerBranchSales` already used. **This fix needs the AWS container rebuilt/redeployed to take effect** — pushing to git alone does not update the running container (see "Production deployments").
+- **Retailer sidebar "Analytics" link hidden** (not deleted) — `components/layout/StoreLayout.tsx` NAV no longer includes it; `/store/analytics` still works if visited directly. Its data (`/api/store/intelligence/summary`) fully duplicates the stat cards already on `/store/intelligence`, so it was redundant, not broken.
+- **8 migrations now exist** (was 5 last time this doc was updated) — `add_analytics_indexes`, `custom_design_weight_range`, and `pgvector` were added since. All confirmed applied on the AWS RDS production DB.
+- **AI image-generation cost analysis** done (see `../AI-Features/CLAUDE.md` "Cost per generation" — verified per-call OpenAI pricing, ~₹57/"Generate All" click at the likely-actual `quality="auto"`→High tier, ~₹15 if forced to Medium) and a **critical flag**: `gpt-image-1` (used for the transparent-background step of try-on generation) is **retiring 2026-10-23** — re-test before then.
+- **Found + should be rotated:** the AWS RDS database password was inadvertently printed in plaintext during this session's SSH debugging (a `sed` redaction pattern missed the `DATABASE_URL=` line). Rotate it when convenient.
+
+**Previous session — public landing + docs reorg:**
 - **Branded landing** at `/` (was "Rebuild in progress"): navbar (logo · Catalog · About · Login · Register) + hero + **featured real-catalog showcase** (public `GET /api/kiosk/catalog`, no price) + "why" cards + footer. **Login popup** = 2 columns (Retailer | Store Manager) via `components/landing/LoginModal.tsx` reusing `StaffLoginForm` in a new `bare` mode. **Register prompt** auto-opens ~5s once per session (`components/landing/RegisterPromptModal.tsx`, sessionStorage). New **`/about`** page. **`/manufacturer`** is a hidden admin entry — visiting it shows the manufacturer login popup (`app/manufacturer/page.tsx`). **`/portal` deleted → redirects to `/`**; signOut + login footers repointed to `/`.
 - **Similar-design (visual) search** surfaced on landing + About (real Store Manager `/search` feature, AI-Features `/embed`).
 - **Responsive pass** — app was already mostly mobile-aware; fixed hero headings (smaller base + break-words), a retailer-row truncation, and card/heading padding.
@@ -220,7 +245,7 @@ full LuxeMatch-style storefront (hero/catalog/try-on/search/custom/restock) + My
 - **Implementation:**
   - New API endpoint: `POST /api/store/search/image` (store-portal.ts) — protected by `storeGuard`
   - New UI page: `/store/similar-search` (upload image → find similar catalog pieces)
-  - Same visual-search logic: embed image → search Qdrant vector DB → return similar manufacturer products
+  - Same visual-search logic: embed image → search pgvector (RDS) → return similar manufacturer products
   - New menu item in Retailer sidebar under "Operations" section
 - **Usage:** Retailer can upload a jewelry photo to discover visually similar pieces from the manufacturer catalog
 - **Same as:** Store Manager search feature (`/store-manager/search`), but accessible from Retailer portal
