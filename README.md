@@ -38,7 +38,7 @@ pnpm dev                    # http://localhost:3000
 Demo retailer for local testing:
 ```bash
 SEED_DEMO_STORE=true pnpm db:seed
-# Manufacturer: admin@atjewellers.com / manufacturer123
+# Manufacturer: admin@atjewellers.com / <password set with SEED_MANUFACTURER_PASSWORD>
 # Retailer:     store@demo.com / store123   (Store Managers are created by the Retailer)
 ```
 

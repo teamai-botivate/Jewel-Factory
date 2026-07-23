@@ -6,8 +6,8 @@
  *   2. The category list
  *   3. (optional) a demo approved store for local testing
  *
- * The manufacturer password is read from SEED_MANUFACTURER_PASSWORD (or defaults
- * to a dev value). Change it before any real deployment.
+ * The manufacturer password is read from SEED_MANUFACTURER_PASSWORD. Production
+ * credentials belong in the database, not as a source-code fallback.
  */
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
@@ -31,7 +31,10 @@ async function main() {
 
   // 2. Manufacturer
   const mfrEmail = process.env.SEED_MANUFACTURER_EMAIL ?? 'admin@atjewellers.com';
-  const mfrPassword = process.env.SEED_MANUFACTURER_PASSWORD ?? 'manufacturer123';
+  const mfrPassword = process.env.SEED_MANUFACTURER_PASSWORD;
+  if (!mfrPassword) {
+    throw new Error('SEED_MANUFACTURER_PASSWORD is required to seed the manufacturer login.');
+  }
   const passwordHash = await bcrypt.hash(mfrPassword, 10);
 
   const manufacturer = await prisma.manufacturer.upsert({

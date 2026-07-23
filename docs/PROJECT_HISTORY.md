@@ -266,7 +266,7 @@ pnpm dev                             # http://localhost:3000
 
 Then, as an agent: **read `../CLAUDE.md`, this file, and `flow.md`** — that's the full
 context. Demo logins after seed: Manufacturer `admin@atjewellers.com /
-manufacturer123`; Retailer `store@demo.com / store123`; Store Manager is created by
+<SEED_MANUFACTURER_PASSWORD>`; Retailer `store@demo.com / store123`; Store Manager is created by
 the Retailer (no default).
 
 ---
