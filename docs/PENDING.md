@@ -77,6 +77,15 @@ Related docs: `HANDOVER.md` (client setup) · `DATABASE.md` (schema) ·
 - [ ] Product_Recommendation (AI design ranking, folder ../Product_Recommendation) → AI-Features me merge (naya endpoint) — tumhari "sab AI ek service" vision
 - [ ] Order-confirmation email/SMS (kiosk) — abhi sirf reset + store-approval emails
 - [ ] pin/rate-limit + integration tests (approval + chat flows)
+- [ ] **Photo search enhancement — catalog + web search, separate listings** (discussed 2026-07-24, deferred — DO NOT start without re-confirming scope):
+  - Current visual search (`/store-manager/search`, `/store/similar-search`) only searches OUR OWN manufacturer catalog via pgvector/OpenCLIP embeddings.
+  - **Wanted:** when a customer's uploaded photo doesn't match well in the catalog, ALSO search the **internet** for visually similar images, and show **two separate sections/listings** — "From our catalog" vs "Similar from the web" (never mixed together).
+  - **Catalog-match path stays 100% unchanged** — only the web-search path + its custom-order hookup are new.
+  - If the customer likes a web-found image, the **Store Manager** sends it through the **existing Custom Design Request flow** (Store Manager → Retailer/Head-Office approval → Retailer → Manufacturer) — same pipeline as today's custom designs, just with a web image as the reference instead of a customer-supplied photo. Goal: no customer leaves without either a catalog match or a custom-order started.
+  - **Open decisions before implementing (ask the owner again):**
+    1. **Which web reverse-image-search API** — options considered: Bing Visual Search / Azure Cognitive Services (real reverse-image-search, most likely fit), SerpApi (Google Lens wrapper, paid third-party), TinEye API (reverse-image-search specialist, paid). All are paid/quota-based — needs a pricing/quota comparison (like the OpenAI cost analysis done for AI Generate) before picking one.
+    2. **How the web image attaches to the Custom Design Request** — use the external URL directly (simpler, but the URL could break/expire/hotlink-block), or download it server-side and re-upload to our own S3 first (consistent with how customer-photo custom-design uploads already work, more reliable, slightly more work).
+  - Nothing implemented yet — this is a note-to-self from the planning conversation, not a spec. Re-confirm both open decisions with the owner before writing any code.
 
 ---
 
