@@ -14,6 +14,11 @@ type Store = {
   addressPincode: string | null; addressLandmark: string | null;
   isActive: boolean; registrationStatus: string; createdAt: Date;
   extraBranchAllowance: number; branchCount: number; storeManagerCount: number;
+  branches: Array<{
+    id: string; name: string; addressCity: string | null; createdAt: Date;
+    managerCount: number; hasRestockPin: boolean;
+    managers: Array<{ id: string; name: string }>;
+  }>;
 };
 
 const FREE_BRANCH_LIMIT = 2;
@@ -146,6 +151,31 @@ function EditModal({ store, onClose, onSaved }: { store: Store; onClose: () => v
             <p><span className="text-muted-foreground">Status:</span> <span className="font-medium">{store.registrationStatus}</span></p>
             <p><span className="text-muted-foreground">Joined:</span> <span className="font-medium">{createdDate}</span></p>
           </div>
+        </div>
+
+        {/* Read-only stores list */}
+        <div className="space-y-2 border-b pb-3">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Stores (Read-only)</h3>
+          {store.branches.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No stores yet.</p>
+          ) : (
+            <div className="space-y-2">
+              {store.branches.map((branch) => (
+                <div key={branch.id} className="rounded-md border bg-muted/30 p-2.5 text-sm space-y-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">{branch.name}</p>
+                      <p className="text-xs text-muted-foreground">{branch.addressCity || '—'}</p>
+                    </div>
+                    <div className="text-right text-xs text-muted-foreground">
+                      <p>{branch.managerCount} manager{branch.managerCount !== 1 ? 's' : ''}</p>
+                      <p>{branch.hasRestockPin ? '🔒 PIN set' : 'No PIN'}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Editable store limits */}

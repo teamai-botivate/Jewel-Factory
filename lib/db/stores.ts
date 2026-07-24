@@ -17,13 +17,25 @@ export async function listStoresByManufacturer(manufacturerId: string) {
       isActive: true, registrationStatus: true, createdAt: true,
       // Store management
       extraBranchAllowance: true,
-      branches: { where: { isActive: true }, select: { _count: { select: { managers: true } } } },
+      branches: {
+        where: { isActive: true },
+        orderBy: { createdAt: 'asc' },
+        select: {
+          id: true, name: true, addressCity: true, restockPinHash: true, createdAt: true,
+          managers: { select: { id: true, name: true } },
+        },
+      },
     },
   });
   return stores.map(({ branches, ...s }) => ({
     ...s,
     branchCount: branches.length,
-    storeManagerCount: branches.reduce((sum, b) => sum + b._count.managers, 0),
+    storeManagerCount: branches.reduce((sum, b) => sum + b.managers.length, 0),
+    branches: branches.map((b) => ({
+      ...b,
+      managerCount: b.managers.length,
+      hasRestockPin: !!b.restockPinHash,
+    })),
   }));
 }
 
