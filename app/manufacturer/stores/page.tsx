@@ -8,8 +8,12 @@ import { Input } from '@/components/ui/input';
 import { useApi, apiSend } from '@/hooks/use-api';
 
 type Store = {
-  id: string; name: string; slug: string; email: string; city: string | null; phone: string | null;
-  isActive: boolean; registrationStatus: string; extraBranchAllowance: number; branchCount: number;
+  id: string; name: string; slug: string; email: string;
+  phone: string | null; ownerName: string | null; ownerPhone: string | null;
+  city: string | null; addressStreet: string | null; addressCity: string | null; addressState: string | null;
+  addressPincode: string | null; addressLandmark: string | null;
+  isActive: boolean; registrationStatus: string; createdAt: Date;
+  extraBranchAllowance: number; branchCount: number; storeManagerCount: number;
 };
 
 const FREE_BRANCH_LIMIT = 2;
@@ -88,29 +92,82 @@ function EditModal({ store, onClose, onSaved }: { store: Store; onClose: () => v
       onSaved();
     } catch (e) { setErr(e instanceof Error ? e.message : 'Failed'); } finally { setBusy(false); }
   }
+  const createdDate = new Date(store.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
   return (
-    <Modal onClose={onClose} title="Edit store">
-      <Input placeholder="Name" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
-      <Input placeholder="Email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
-      <Input placeholder="City" value={form.city} onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))} />
-      <Input placeholder="Phone" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} />
-      <div>
-        <label className="mb-1 block text-xs font-medium text-muted-foreground">
-          Extra stores granted (free limit is {FREE_BRANCH_LIMIT} — set after an agreement with this retailer)
-        </label>
-        <Input
-          type="number"
-          min={0}
-          placeholder="Extra stores (0 = default 2 only)"
-          value={form.extraBranchAllowance}
-          onChange={(e) => setForm((f) => ({ ...f, extraBranchAllowance: e.target.value }))}
-        />
-        <p className="mt-1 text-[11px] text-muted-foreground">
-          Effective limit: {FREE_BRANCH_LIMIT} + {parseInt(form.extraBranchAllowance, 10) || 0} = {FREE_BRANCH_LIMIT + (parseInt(form.extraBranchAllowance, 10) || 0)} stores
-        </p>
+    <Modal onClose={onClose} title={`${store.name} — Full Profile`}>
+      <div className="space-y-4 max-h-[70vh] overflow-y-auto">
+        {/* Editable contact section */}
+        <div className="space-y-2 border-b pb-3">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Contact Info (Editable)</h3>
+          <Input placeholder="Business Name" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
+          <Input placeholder="Email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
+          <Input placeholder="Phone" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} />
+          <Input placeholder="City" value={form.city} onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))} />
+        </div>
+
+        {/* Read-only owner info */}
+        <div className="space-y-2 border-b pb-3">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Owner Details (Read-only)</h3>
+          <div className="rounded-md border bg-muted/30 p-3 text-sm space-y-1">
+            <p><span className="text-muted-foreground">Name:</span> <span className="font-medium">{store.ownerName || '—'}</span></p>
+            <p><span className="text-muted-foreground">Phone:</span> <span className="font-medium">{store.ownerPhone || '—'}</span></p>
+          </div>
+        </div>
+
+        {/* Read-only full address */}
+        <div className="space-y-2 border-b pb-3">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Headquarters Address (Read-only)</h3>
+          <div className="rounded-md border bg-muted/30 p-3 text-sm space-y-1 text-muted-foreground">
+            <p>{store.addressStreet || '—'}</p>
+            <p>{[store.addressCity, store.addressState, store.addressPincode].filter(Boolean).join(', ') || '—'}</p>
+            <p>{store.addressLandmark || '—'}</p>
+          </div>
+        </div>
+
+        {/* Read-only store/manager stats */}
+        <div className="space-y-2 border-b pb-3">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Operations (Read-only)</h3>
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <div className="rounded-md border bg-muted/30 p-2 text-center">
+              <p className="text-muted-foreground text-[11px]">Active Stores</p>
+              <p className="text-lg font-semibold">{store.branchCount}</p>
+            </div>
+            <div className="rounded-md border bg-muted/30 p-2 text-center">
+              <p className="text-muted-foreground text-[11px]">Store Managers</p>
+              <p className="text-lg font-semibold">{store.storeManagerCount}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Read-only status info */}
+        <div className="space-y-2 border-b pb-3">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Status (Read-only)</h3>
+          <div className="rounded-md border bg-muted/30 p-3 text-sm space-y-1">
+            <p><span className="text-muted-foreground">Status:</span> <span className="font-medium">{store.registrationStatus}</span></p>
+            <p><span className="text-muted-foreground">Joined:</span> <span className="font-medium">{createdDate}</span></p>
+          </div>
+        </div>
+
+        {/* Editable store limits */}
+        <div className="space-y-2">
+          <label className="text-xs font-medium text-muted-foreground">
+            Extra stores granted (free limit is {FREE_BRANCH_LIMIT})
+          </label>
+          <Input
+            type="number"
+            min={0}
+            placeholder="0"
+            value={form.extraBranchAllowance}
+            onChange={(e) => setForm((f) => ({ ...f, extraBranchAllowance: e.target.value }))}
+          />
+          <p className="text-[11px] text-muted-foreground">
+            Effective limit: {FREE_BRANCH_LIMIT} + {parseInt(form.extraBranchAllowance, 10) || 0} = {FREE_BRANCH_LIMIT + (parseInt(form.extraBranchAllowance, 10) || 0)} stores
+          </p>
+        </div>
+
+        {err && <p className="text-sm text-red-600">{err}</p>}
+        <div className="flex gap-2"><Button onClick={save} disabled={busy} className="metal-sheen text-[#17120b] font-semibold flex-1">{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save'}</Button><Button variant="outline" onClick={onClose}>Cancel</Button></div>
       </div>
-      {err && <p className="text-sm text-red-600">{err}</p>}
-      <div className="flex gap-2"><Button onClick={save} disabled={busy} className="metal-sheen text-[#17120b] font-semibold flex-1">{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save'}</Button><Button variant="outline" onClick={onClose}>Cancel</Button></div>
     </Modal>
   );
 }

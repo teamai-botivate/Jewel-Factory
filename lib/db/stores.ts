@@ -8,12 +8,23 @@ export async function listStoresByManufacturer(manufacturerId: string) {
     where: { manufacturerId },
     orderBy: { createdAt: 'desc' },
     select: {
-      id: true, name: true, slug: true, email: true, city: true, phone: true,
-      isActive: true, registrationStatus: true, createdAt: true, extraBranchAllowance: true,
-      _count: { select: { branches: { where: { isActive: true } } } },
+      id: true, name: true, slug: true, email: true,
+      // Contact info
+      phone: true, ownerName: true, ownerPhone: true,
+      // Address
+      city: true, addressStreet: true, addressCity: true, addressState: true, addressPincode: true, addressLandmark: true,
+      // Status
+      isActive: true, registrationStatus: true, createdAt: true,
+      // Store management
+      extraBranchAllowance: true,
+      branches: { where: { isActive: true }, select: { _count: { select: { managers: true } } } },
     },
   });
-  return stores.map(({ _count, ...s }) => ({ ...s, branchCount: _count.branches }));
+  return stores.map(({ branches, ...s }) => ({
+    ...s,
+    branchCount: branches.length,
+    storeManagerCount: branches.reduce((sum, b) => sum + b._count.managers, 0),
+  }));
 }
 
 export async function listPendingRegistrations() {
